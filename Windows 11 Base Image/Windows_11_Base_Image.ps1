@@ -11,7 +11,7 @@
     - Setting default file associations (Chrome for web, Adobe for PDFs, Outlook for mail).
     - Customizing the Start menu and taskbar (left alignment, pinned apps, removing Widgets/Chat/Copilot).
     - Replacing the default start layout with a custom enterprise layout.
-    - Optionally performing Windows Updates and Office 365 installations.
+    - Optionally performing Windows Updates. Lines 1868,1874,1876,1878
     - Providing a GUI to rename the computer after setup.
     - Cleaning up temporary files and preparing the image for deployment.
 
