@@ -9,7 +9,7 @@ exports the results to a CSV file at the specified path. Ensure the ActiveDirect
 and you have sufficient permissions to query AD user accounts. 
 
 .NOTES
-Author      : Your Name
+Author      : capnhowyoudo
 Date        : 2025-11-12
 Requires    : ActiveDirectory module (RSAT) installed
 Output File : C:\alluser_reports.csv
