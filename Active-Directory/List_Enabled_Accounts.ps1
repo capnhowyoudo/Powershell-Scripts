@@ -10,7 +10,7 @@ to simulate the export without creating the file. Remove or set -WhatIf:$false t
 Ensure the ActiveDirectory module is installed and you have sufficient permissions to query AD users.
 
 .NOTES
-Author      : Your Name
+Author      : capnhowyoudo
 Date        : 2025-11-12
 Requires    : ActiveDirectory module (RSAT) installed
 Default Output File : C:\Temp\EnabledADUsers.csv
