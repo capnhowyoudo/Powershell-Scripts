@@ -19,7 +19,7 @@
     domain joining, or large-scale deployment.
 
 .NOTES
-    File Name:   Windows_11_Base_ImageV1.ps1
+    File Name:   Windows_11_Base_Image.ps1
     Version:     1.0
     Author:      Capnhowyoudo
     Created:     June 20, 2025
