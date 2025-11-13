@@ -13,7 +13,8 @@ Ensure you have sufficient permissions to delete AD user accounts before running
 Author      : capnhowyoudo
 Date        : 2025-11-12
 Requires    : ActiveDirectory module (RSAT) installed
-CSV Format  : The CSV file should contain a column header named "samAccountName"
+CSV Format  : The CSV file should contain a column header named "samAccountName" Can aquire with Export_Enabled_Accounts.ps1
+https://github.com/capnhowyoudo/Powershell-Scripts/blob/main/Active-Directory/Export_Enabled_Accounts.ps1
 
 Example CSV:
 samAccountName
