@@ -16,15 +16,15 @@ This script is useful for auditing user activity, monitoring workstation securit
 or analyzing lock/unlock patterns on a system.
 
 .NOTES
-File Name   : Export_Workstation_Lock_Unlock_Events.ps1
+File Name   : Get_Workstation_Lock_Unlock_Events.ps1
 Author      : capnhowyoudo
 Date        : 2025-11-13
 Requires    : PowerShell 3.0+
 Usage       : 
     - Display events in console without exporting:
-        .\Export_Workstation_Lock_Unlock_Events.ps1 -Export $false
+        .\Get_Workstation_Lock_Unlock_Events.ps1 -Export $false
     - Display events and export to CSV:
-        .\Export_Workstation_Lock_Unlock_Events.ps1 -Export $true
+        .\Get_Workstation_Lock_Unlock_Events.ps1 -Export $true
 Output File : C:\Temp\WorkstationLockEvents.csv
 Limitations : Only retrieves events from the local machine. Remote queries require additional parameters.
 #>
