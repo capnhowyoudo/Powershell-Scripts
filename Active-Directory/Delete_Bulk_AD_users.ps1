@@ -14,8 +14,8 @@ Author      : capnhowyoudo
 Date        : 2025-11-12
 Requires    : ActiveDirectory module (RSAT) installed
 CSV Format  : The CSV file should contain a column header named "samAccountName" Can aquire with the following
-https://github.com/capnhowyoudo/Powershell-Scripts/blob/main/Active-Directory/Export_Enabled_Accounts.ps1
-https://github.com/capnhowyoudo/Powershell-Scripts/blob/main/Active-Directory/Export_Inactive_Users_Time_Span.ps1
+https://github.com/capnhowyoudo/Powershell-Scripts/blob/main/Active-Directory/Auditing/Get_Enabled_Accounts.ps1
+https://github.com/capnhowyoudo/Powershell-Scripts/blob/main/Active-Directory/Auditing/Get_Inactive_Users_N_Days.ps1
 
 Example CSV:
 samAccountName
