@@ -15,15 +15,15 @@ The export option can be set to $true or $false.
 This is useful for auditing, inventory, or compliance purposes. The script does not modify any system settings.
 
 .NOTES
-File Name   : Export_Installed_Applications.ps1
+File Name   : Get_Installed_Applications.ps1
 Author      : capnhowyoudo
 Date        : 2025-11-13
 Requires    : PowerShell 3.0+
 Usage       : 
     - Display installed applications in console without export:
-        .\Export_Installed_Applications.ps1 -Export $false
+        .\Get_Installed_Applications.ps1 -Export $false
     - Export installed applications to CSV:
-        .\Export_Installed_Applications.ps1 -Export $true
+        .\Get_Installed_Applications.ps1 -Export $true
 Output File : C:\Temp\InstalledApplications.csv
 Limitations : Only lists applications registered in the registry under the uninstall keys.
 #>
