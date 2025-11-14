@@ -1,4 +1,4 @@
-Powershell scripts For Active Directory, Workstations, Servers Etc. 
+#Powershell scripts For Active Directory, Workstations, Servers Etc. 
 
 ⚠️ Use At Your Own Risk — PowerShell Scripts
 
