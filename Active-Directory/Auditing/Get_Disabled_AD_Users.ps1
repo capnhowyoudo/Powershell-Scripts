@@ -19,15 +19,15 @@ Usage       : Run the script in a session with AD privileges. Use -WhatIf:$false
 
 .EXAMPLE
 # Dry-run to simulate exporting disabled users
-.\Export_Disabled_AD_Users.ps1 -WhatIf:$true
+.\Get_Disabled_AD_Users.ps1 -WhatIf:$true
 
 .EXAMPLE
 # Perform the actual export
-.\Export_Disabled_AD_Users.ps1 -WhatIf:$false
+.\Get_Disabled_AD_Users.ps1 -WhatIf:$false
 
 .EXAMPLE
 # Export to a custom CSV path
-.\Export_Disabled_AD_Users.ps1 -CsvPath "D:\Reports\DisabledUsers.csv" -WhatIf:$false
+.\Get_Disabled_AD_Users.ps1 -CsvPath "D:\Reports\DisabledUsers.csv" -WhatIf:$false
 #>
 
 [CmdletBinding()]
