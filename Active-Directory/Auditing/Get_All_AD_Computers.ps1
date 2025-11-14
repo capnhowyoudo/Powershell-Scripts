@@ -19,15 +19,15 @@ Usage       : Run the script in a session with AD privileges. Use -WhatIf:$false
 
 .EXAMPLE
 # Dry-run to simulate export
-.\Export_All_AD_Computers.ps1 -WhatIf:$true
+.\Get_All_AD_Computers.ps1 -WhatIf:$true
 
 .EXAMPLE
 # Perform the actual export
-.\Export_All_AD_Computers.ps1 -WhatIf:$false
+.\Get_All_AD_Computers.ps1 -WhatIf:$false
 
 .EXAMPLE
 # Export to a custom CSV path
-.\Export_All_AD_Computers.ps1 -CsvPath "D:\Reports\AllComputers.csv" -WhatIf:$false
+.\Get_All_AD_Computers.ps1 -CsvPath "D:\Reports\AllComputers.csv" -WhatIf:$false
 #>
 
 [CmdletBinding()]
