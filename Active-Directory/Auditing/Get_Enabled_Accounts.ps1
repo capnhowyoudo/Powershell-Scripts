@@ -18,16 +18,16 @@ Usage       : Run the script in a session with AD privileges. Use -WhatIf:$false
 
 .EXAMPLE
 # Dry-run (simulate) export
-.\Export_Enabled_Accounts.ps1 -WhatIf:$true
+.\Get_Enabled_Accounts.ps1 -WhatIf:$true
 
 .EXAMPLE
 # Perform the actual export
-.\Export_Enabled_Accounts.ps1 -WhatIf:$false
+.\Get_Enabled_Accounts.ps1 -WhatIf:$false
 
 .EXAMPLE
 # Export to a custom path
 $csvPath = "D:\Reports\EnabledUsers.csv"
-.Export_Enabled_Accounts.ps1 -CsvPath $csvPath -WhatIf:$false
+.\Get_Enabled_Accounts.ps1 -CsvPath $csvPath -WhatIf:$false
 #>
 
 [CmdletBinding()]
