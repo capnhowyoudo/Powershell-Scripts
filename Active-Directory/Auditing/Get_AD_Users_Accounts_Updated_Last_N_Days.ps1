@@ -13,7 +13,7 @@
     - You can specify how many days back to check using the -Days parameter
     - Default is 1 day (today)
     - Example usage:
-        .\Get_AD_Users_Updated_Last_N_Days.ps1 -Days 3
+        .\Get_AD_Users_Accounts_Updated_Last_N_Days.ps1 -Days 3
       This checks all users updated in the last 3 days.
 #>
 
