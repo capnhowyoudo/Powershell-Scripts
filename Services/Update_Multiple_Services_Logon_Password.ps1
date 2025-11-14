@@ -19,7 +19,7 @@ The new password for that account. You will be prompted if not provided.
 If specified, services will be restarted after password change.
 
 .EXAMPLE
-.\Update_Multiple_Service_Logon_Password.ps1 -Services "Spooler","W32Time" -Username "CORP\ServiceAcct" -Restart
+.\Update_Multiple_Services_Logon_Password.ps1 -Services "Spooler","W32Time" -Username "CORP\ServiceAcct" -Restart
 #>
 
 param(
