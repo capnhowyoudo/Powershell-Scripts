@@ -20,50 +20,39 @@ Usage       : Run in a session with sufficient privileges to read HKEY_USERS. Su
 Limitations : Only users with loaded profiles are included. Mapped drives from unloaded profiles will not appear.
 #>
 
+# This is required for Verbose to work correctly.
+# If you don't want the Verbose message, remove "-Verbose" from the Parameters field.
 [CmdletBinding()]
-param (
-    [switch]$ExportCsv = $false,             # Optionally export results to CSV set to true
-    [string]$CsvPath = "C:\Temp\MappedDrives.csv"  # Default CSV path
-)
+param ()
 
-# Get all network drives under HKEY_USERS
+# On most OSes, HKEY_USERS only contains users that are logged on.
+# There are ways to load the other profiles, but it can be problematic.
 $Drives = Get-ItemProperty "Registry::HKEY_USERS\*\Network\*"
 
-# Initialize results collection
-$Results = @()
+# See if any drives were found
+if ( $Drives ) {
 
-# Check if any drives were found
-if ($Drives) {
-    ForEach ($Drive in $Drives) {
+ForEach ( $Drive in $Drives ) {
 
-        # Extract SID from the registry path
+# PSParentPath looks like this: Microsoft.PowerShell.Core\Registry::HKEY_USERS\S-1-5-21-##########-##########-##########-####\Network
         $SID = ($Drive.PSParentPath -split '\\')[2]
 
-        $Obj = [PSCustomObject]@{
-            # Translate SID to NT username
+[PSCustomObject]@{
+            # Use .NET to look up the username from the SID
             Username            = ([System.Security.Principal.SecurityIdentifier]"$SID").Translate([System.Security.Principal.NTAccount])
             DriveLetter         = $Drive.PSChildName
             RemotePath          = $Drive.RemotePath
-            # Remove "0" for ConnectWithUsername when not used
+
+# The username specified when you use "Connect using different credentials".
+            # For some reason, this is frequently "0" when you don't use this option. I remove the "0" to keep the results consistent.
             ConnectWithUsername = $Drive.UserName -replace '^0$', $null
             SID                 = $SID
         }
 
-        # Output to pipeline
-        $Obj
-        # Collect for optional export
-        $Results += $Obj
-
-    }
-
-    # Export to CSV if requested
-    if ($ExportCsv) {
-        $Results | Export-Csv -Path $CsvPath -NoTypeInformation -Encoding UTF8
-        Write-Host "Mapped drives exported to $CsvPath"
-    }
+}
 
 } else {
 
-    Write-Verbose "No mapped drives were found"
+Write-Verbose "No mapped drives were found"
 
 }
