@@ -8,23 +8,23 @@ These PowerShell scripts are provided as-is, without warranty of any kind. By ru
 
 Recommended precautions (must-read)
 
-Test in a sandbox or VM first (e.g., a disposable virtual machine or container).
+- Test in a sandbox or VM first (e.g., a disposable virtual machine or container).
 
-Back up important data before running anything that modifies files, system settings, the registry, or user accounts.
+- Back up important data before running anything that modifies files, system settings, the registry, or user accounts.
 
-Review the entire script line-by-line. Do not run blindly.
+- Review the entire script line-by-line. Do not run blindly.
 
-Run with least privilege — only elevate to Administrator when absolutely necessary.
+- Run with least privilege — only elevate to Administrator when absolutely necessary.
 
-Use -WhatIf / -Confirm switches in cmdlets that support them while testing.
+- Use -WhatIf / -Confirm switches in cmdlets that support them while testing.
 
-Use Get-ExecutionPolicy -List to check system policies and avoid changing global policies permanently.
+- Use Get-ExecutionPolicy -List to check system policies and avoid changing global policies permanently.
 
-Prefer signed scripts — consider signing with an Authenticode certificate for production use.
+- Prefer signed scripts — consider signing with an Authenticode certificate for production use.
 
-Use source control (Git) and code review for changes to the script.
+- Use source control (Git) and code review for changes to the script.
 
-WARNING: Use at your own risk. Review code. Test in VM.
+# WARNING: Use at your own risk. Review code. Test in VM.
 
 ## Requirements
 - PowerShell 7+ or Windows PowerShell 5.1
