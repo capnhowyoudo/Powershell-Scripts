@@ -1,8 +1,8 @@
- ⚠️ Use At Your Own Risk — PowerShell Scripts
+# ⚠️ Use At Your Own Risk — PowerShell Scripts
 
 Supported PowerShell: PowerShell 5.1 / PowerShell 7+ (specify whichever applies)
 
-⚠️ High-level disclaimer
+# ⚠️ High-level disclaimer
 
 These PowerShell scripts are provided as-is, without warranty of any kind. By running or using these scripts you accept full responsibility for any consequences — including data loss, system instability, security issues, or legal/regulatory impacts. Do not run these scripts on production systems unless you understand every line and have tested them in a safe environment.
 
