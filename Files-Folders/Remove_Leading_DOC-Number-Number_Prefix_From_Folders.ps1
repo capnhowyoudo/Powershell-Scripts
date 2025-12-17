@@ -7,6 +7,16 @@ This script recursively scans all directories under a specified source path.
 If a directory name starts with the pattern "DOC-<digits>-<digits>", that prefix
 is removed and the folder is renamed. Each rename operation is recorded,
 including the original full path, old name, and new name, and exported to a CSV file.
+
+.NOTES
+PREVIEW-ONLY MODE:
+To test this script without making any changes to the filesystem,
+temporarily remove or comment out the following line:
+
+    Rename-Item -Path $_.FullName -NewName $newName
+
+When that line is removed, the script will only calculate and log the
+proposed new names to the CSV file without renaming any folders.
 #>
 
 $sourcePath = "C:\Your\Source\Folder\Here"
