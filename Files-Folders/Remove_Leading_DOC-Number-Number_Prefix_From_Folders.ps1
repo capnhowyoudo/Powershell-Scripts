@@ -17,6 +17,18 @@ temporarily remove or comment out the following line:
 
 When that line is removed, the script will only calculate and log the
 proposed new names to the CSV file without renaming any folders.
+
+.EXAMPLE
+If you have a directory named:
+
+    DOC-12345-67890 ProjectName_1-0_0012_202512161200
+
+Running the script will rename it to:
+
+    ProjectName_1-0_0012_202512161200
+
+This shows the prefix "DOC-12345-67890" being removed while keeping the rest of the folder name intact.
+
 #>
 
 $sourcePath = "C:\Your\Source\Folder\Here"
