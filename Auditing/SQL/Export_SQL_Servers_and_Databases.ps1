@@ -24,7 +24,7 @@ function Check-And-Install-Module {
         
         try {
             # Install the module for the current user only
-            Install-Module -Name $ModuleName -Scope CurrentUser -Force -Confirm:$false
+            Install-Module -Name $ModuleName -Scope CurrentUser -Force -Confirm:$false -AllowClobber
             Write-Host "Successfully installed module '$ModuleName'." -ForegroundColor Green
             
             # Since the module was just installed, we need to explicitly import it
