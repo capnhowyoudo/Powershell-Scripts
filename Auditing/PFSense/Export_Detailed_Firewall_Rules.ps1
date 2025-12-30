@@ -27,7 +27,7 @@ It consolidates this information into a structured CSV file for documentation, a
 
 # Define paths
 $xmlPath = "C:\path\to\your\config.xml"
-$csvPath = "C:\path\to\pfsense_firewall_rules_detailed.csv"
+$csvPath = "C:\temp\pfsense_firewall_rules_detailed.csv"
 
 # Load the XML file
 [xml]$pfConfig = Get-Content -Path $xmlPath
