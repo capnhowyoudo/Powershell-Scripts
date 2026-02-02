@@ -9,7 +9,6 @@
 .NOTES
     - If you want to install a different application, you must change the app ID within the $UserScript block.
     - Current ID: 9N1F85V9T8BN (Windows App).
-    - Current ID: 9ncbcszsjrsb (Spotify).
     - To add more apps, list them inside the parentheses separated by commas
       $AppIds = @("9N1F85V9T8BN", "9WZDNCRFJBMP", "9NBLGGH4R3PZ")
     
