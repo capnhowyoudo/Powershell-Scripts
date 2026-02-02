@@ -17,32 +17,32 @@ It then creates and registers a scheduled task that runs at user logon under the
   - OR run: winget search <app name> and use the Id column
 #>
 
+$AppID      = "9N1F85V9T8BN"
 $TaskName   = "InstallWindowsApp_UserContext"
 $ScriptPath = "$env:ProgramData\InstallWindowsApp.ps1"
-
-# Winget App ID to install (change as needed)
-$AppId = "9N1F85V9T8BN"
 
 # User-context script (silent)
 $UserScript = @"
 # Function to check for winget
 function Ensure-Winget {
-    \$wingetPath = "\$env:LOCALAPPDATA\Microsoft\WindowsApps\winget.exe"
-    if (-not (Test-Path \$wingetPath)) {
+    `$wingetPath = "`$env:LOCALAPPDATA\Microsoft\WindowsApps\winget.exe"
+    if (-not (Test-Path `$wingetPath)) {
         # Winget comes with App Installer from Microsoft Store
-        Write-Output "Winget not found. Installing App Installer silently…"
-        Start-Process "powershell.exe" -ArgumentList "-NoProfile -WindowStyle Hidden -Command `"Get-AppxPackage Microsoft.DesktopAppInstaller -AllUsers | Foreach { Add-AppxPackage -DisableDevelopmentMode -Register `"`$(`$_.InstallLocation)\AppXManifest.xml`" }`"" -WindowStyle Hidden -Wait
+        Write-Output "Winget not found. Installing App Installer silently..."
+        Start-Process "powershell.exe" -ArgumentList "-NoProfile -WindowStyle Hidden -Command \`"Get-AppxPackage Microsoft.DesktopAppInstaller -AllUsers | Foreach { Add-AppxPackage -DisableDevelopmentMode -Register \`"`$(`$_.InstallLocation)\AppXManifest.xml\`" }\`"" -WindowStyle Hidden -Wait
     }
 }
 
 # Ensure winget is present
 Ensure-Winget
 
-# Install application if not installed
-Start-Process -FilePath "winget.exe" `
-    -ArgumentList "install --id $AppId --source msstore --accept-package-agreements --accept-source-agreements --silent" `
-    -WindowStyle Hidden `
-    -Wait
+# Install Windows App if not installed
+if (-not (Get-AppxPackage -Name MicrosoftCorporationII.WindowsApp -ErrorAction SilentlyContinue)) {
+    Start-Process -FilePath "winget.exe" \`
+        -ArgumentList "install --id $AppID --source msstore --accept-package-agreements --accept-source-agreements --silent" \`
+        -WindowStyle Hidden \`
+        -Wait
+}
 "@
 
 # Write script silently
