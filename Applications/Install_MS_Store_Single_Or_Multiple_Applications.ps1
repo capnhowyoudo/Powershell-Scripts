@@ -1,11 +1,12 @@
 <#
 .SYNOPSIS
-    Automates the installation of multiple Windows Apps via Winget with zero window pop-ups and immediate execution.
+    Automates the installation of a single or multiple Windows Apps (Microsoft App Store) via Winget with zero window pop-ups and immediate execution.
 
 .DESCRIPTION
     This script uses 'conhost.exe --headless' to prevent the console flash and 'Start-ScheduledTask' 
     to ensure the installation begins the moment the script is executed.
-
+    This script runs immediately when deployed; if no user is logged in, installation occurs at the user’s next logon.
+    
 .NOTES
     - If you want to install a different application, you must change the app ID within the $UserScript block.
     - Current ID: 9N1F85V9T8BN (Windows App).
