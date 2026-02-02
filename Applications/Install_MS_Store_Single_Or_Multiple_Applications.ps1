@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Automates the installation of a single or multiple Windows Apps (Microsoft App Store) via Winget with zero window pop-ups and immediate execution.
+    Automates the installation of one or more Microsoft Store Windows apps using Winget by leveraging Task Scheduler, ensuring immediate execution with no visible windows.
 
 .DESCRIPTION
     This script uses 'conhost.exe --headless' to prevent the console flash and 'Start-ScheduledTask' 
