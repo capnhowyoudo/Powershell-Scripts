@@ -1,50 +1,35 @@
 <#
-.SYNOPSIS
-    Automates the setup, cleanup, and configuration of a Windows 11 base image for enterprise deployment.
-
-.DESCRIPTION
-    This script prepares a clean, standardized Windows 11 installation by:
-    - Ensuring administrative execution and PowerShell permissions.
-    - Configuring consistent power settings across all power plans.
-    - Removing Windows 11 and OEM preinstalled bloatware (HP, Dell, Lenovo).
-    - Installing core business applications via Chocolatey (e.g., Chrome, Adobe Reader, 7-Zip, VLC, Office 365). Lines 1716-1722 
-    - Setting default file associations (Chrome for web, Adobe for PDFs, Outlook for mail).
-    - Customizing the Start menu and taskbar (left alignment, pinned apps, removing Widgets/Chat/Copilot).
-    - Replacing the default start layout with a custom enterprise layout.
-    - Optionally performing Windows Updates. Lines 1868,1874,1876,1878
-    - Providing a GUI to rename the computer after setup.
-    - Cleaning up temporary files and preparing the image for deployment.
-
-    The result is a streamlined, enterprise-ready Windows 11 environment suitable for imaging,
-    domain joining, or large-scale deployment.
-
-.NOTES
-    File Name:   Windows_11_Base_Image.ps1
-    Version:     1.0
-    Author:      Capnhowyoudo
-    Created:     June 20, 2025
-    Tested On:   Windows 11 Pro x64 (Build 22H2 or later)
-    Requirements:
-        - Must be run as Administrator
-        - PowerShell ExecutionPolicy set to Unrestricted or RemoteSigned
-        - Internet connection required for Chocolatey and app installations
-
-    Credit:
-        - Computer rename GUI adapted from: https://github.com/dvir001/Change-Windows-10-computer-name-Powershell-GUI-tool
-        - Office 365 Remover Aaron Viehl (Singleton Factory GmbH)
-        - Chocolatey packages: https://community.chocolatey.org/packages
-
-    Usage:
-        1. Open PowerShell as Administrator
-        2. Run:
-            Set-ExecutionPolicy Unrestricted -Scope CurrentUser -Force
-        3. Execute the script:
-            .\Windows_11_Base_Image.ps1
-        4. Follow on-screen prompts
-
-    This script is intended for IT administrators, system builders, and deployment engineers
-    who need to automate the configuration of Windows 11 base images for business or lab use.
-
+ If Running of loaded scripts is disabled you will need to run PowerShell as admin with the following command                              
+    Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser -Force                                                            
+ This Script will install The Chocolatey Module for PowerShell and install applications listed in the application portion of this Script   
+ Chocolatey Temp folder location C:\Users\admin\AppData\Local\Temp\chocolatey                                                              
+ Chocolatey apps and commands can be found here https://chocolatey.org/packages, use -y to force the install                               
+ Script will change the powersettings for Monitor 15 mins, Disk 0 mins, Standby 60 mins, Hibernate 0 mins.                                  
+ Script will Remove Windows 11 Bloatware Apps   
+ Script will Remove HP,Dell & Lenovo Bloatware   
+ Script will Remove pre installed office 365 verison using the SARA tool                                                                                         
+ Script will Replace the Default Start layout with the new start layout for the applications that were installed via Chocolatey            
+ Script will Pin items to the taskbar for all user profiles 
+ Script will Set Taskbar to left and Removes Widgets,Chats,Copilot
+ Script will Unping Windows Appstore from all Uses taskbars and profiles                                                                               
+ Script will Set default applications with Google Chrome for web browser, Adobe Reader for PDF and Outlook For mail                                                                                                 
+ Script will Install NUGet Package Provider                                                                                                
+ Script will check for and Install Windows updates to enable Remove # from lines 1854,1860,1862
+ Script will provide a window based GUI to rename the workstation                                               
+ Office 365 Package Parameters                                                                                                              
+  /configpath - Allows you to specify a custom XML configuration for the installer which is present on the system.                         
+  /productid - Allows you to change the default product id to install from O365BusinessRetail to something else.                           
+  /exclude - Allows you to exclude some applications from the default product id you install.                                              
+  /language - Allows you to specify a language different to the default one present on the device.                                         
+  /updates - Enables auto-updates.                                                                                                         
+  /eula - Automatically accepts EULA.                                                                                                      
+  Ex. choco install office365business --forcex86 --params="/productid:O365ProPlusRetail" /language:"en-us" /updates:"TRUE" /eula:"TRUE" -y 
+  O365 Editions                                                                                                                            
+  1. O365BusinessRetail                                                                                                                    
+  2. O365ProPlusRetail                                                                                                                     
+ Created By Dominick DiBenedetto                                                                                                           
+ Credit for Change Computer Name shell dvir001 https://github.com/dvir001/Change-Windows-10-computer-name-Powershell-GUI-tool              
+ Version 1.0 6.20.25                                                                                                                       
 #>
 
 ########################
@@ -1615,11 +1600,13 @@ Function Invoke-SetupOffice365($Office365ConfigFile) {
     }
 }
 
+<#
 Function Invoke-RebootInSeconds($Seconds) {
     if (-not $SuppressReboot) {
         Start-Process -FilePath "$env:SystemRoot\system32\shutdown.exe" -ArgumentList "/r /c `"Reboot needed. System will reboot in $Seconds seconds.`" /t $Seconds /f /d p:4:1"
     }
 }
+#>
 
 Function Set-CurrentStage($StageValue) {
     if (-not (Test-Path "HKLM:\Software\OEM\Singleton-Factory-GmbH\M365\Install")) {
@@ -1665,7 +1652,7 @@ if (-not ($RunAgain)) {
                 Invoke-OfficeUninstall 
                 Invoke-SetupOffice365 "$Office365Setup_URL/upgrade.xml"
                 Remove-SaRA
-                Invoke-RebootInSeconds $SecondsToReboot
+                #Invoke-RebootInSeconds $SecondsToReboot
             }
 
             3 {
@@ -1683,7 +1670,7 @@ if (-not ($RunAgain)) {
                 Invoke-OfficeUninstall 
                 Invoke-SetupOffice365 "$Office365Setup_URL/upgrade.xml"
                 Remove-SaRA
-                Invoke-RebootInSeconds $SecondsToReboot
+                #Invoke-RebootInSeconds $SecondsToReboot
             }
         }
     }
@@ -1692,7 +1679,7 @@ if (-not ($RunAgain)) {
         Stop-OfficeProcess
         Invoke-OfficeUninstall 
         Invoke-SetupOffice365 "$Office365Setup_URL/upgrade.xml"
-        Invoke-RebootInSeconds $SecondsToReboot
+        #Invoke-RebootInSeconds $SecondsToReboot
     }
 }
 else {
@@ -1700,7 +1687,7 @@ else {
     Stop-OfficeProcess
     Invoke-OfficeUninstall 
     Invoke-SetupOffice365 "$Office365Setup_URL/upgrade.xml"
-    Invoke-RebootInSeconds $SecondsToReboot
+    #Invoke-RebootInSeconds $SecondsToReboot
 }
 
 ######################################
@@ -1722,6 +1709,7 @@ else {
         'https://community.chocolatey.org/install.ps1'
     ))
 }
+
 
 ########################
 # Install Applications #
@@ -1768,6 +1756,8 @@ New-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\Explore
 ########################################################
 # Pin Items to Start Menu And Pin Shortcuts to Taskbar #
 ########################################################
+
+#Run Get-StartApps to get AppID
 
 if((Test-Path -LiteralPath "HKLM:\SOFTWARE\Microsoft\PolicyManager") -ne $true) {  New-Item "HKLM:\SOFTWARE\Microsoft\PolicyManager" -force -ea SilentlyContinue };
 if((Test-Path -LiteralPath "HKLM:\SOFTWARE\Microsoft\PolicyManager\current") -ne $true) {  New-Item "HKLM:\SOFTWARE\Microsoft\PolicyManager\current" -force -ea SilentlyContinue };
