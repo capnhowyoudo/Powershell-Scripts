@@ -25,6 +25,7 @@
 
 .NOTES
     Requires: Administrator privileges to import into the LocalMachine\Root store.
+    If Using ISE be sure to set the password in [string]$pwd =
 #>
 
 param (
