@@ -32,6 +32,7 @@ HOW TO USE:
 
 NOTES:
 - Requires RSAT and Active Directory administrative permissions.
+
 - The BitLocker Recovery tab only appears after:
     - The feature is installed
     - Advanced Features is enabled
@@ -42,6 +43,12 @@ NOTES:
     msFVE-RecoveryInformation
 
 - Useful for domain-joined BitLocker-managed devices.
+
+For BitLocker recovery keys to automatically appear in Active Directory, one of these must be true:
+
+A Group Policy configures BitLocker recovery backup to AD DS
+A script/manual command explicitly backs up the recovery key
+MBAM / Intune / another management solution escrows the key
 
 .NOTES
 Author: capnhowyoudo
