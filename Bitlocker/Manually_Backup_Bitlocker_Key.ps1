@@ -30,7 +30,7 @@
     - Only key protectors of type RecoveryPassword or ExternalKey can be backed up to AD DS.
     - Ensure the AD DS schema has been extended to support BitLocker (via Group Policy) before use.
     
-    Computer Configuration
+→ Computer Configuration
   → Administrative Templates
     → Windows Components
       → BitLocker Drive Encryption
