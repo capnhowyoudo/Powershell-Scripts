@@ -44,23 +44,23 @@
 
 .EXAMPLE
     # Minimum required - token auth on default port 443
-    .\Get-FortiGateConfig.ps1 -FortiGateHost "192.168.1.1" -ApiToken "YourApiTokenHere"
+    .\Get_Forti_Gate_Config_Individual_Csv.ps1 -FortiGateHost "192.168.1.1" -ApiToken "YourApiTokenHere"
 
 .EXAMPLE
     # Self-signed cert (most common for on-prem FortiGates)
-    .\Get-FortiGateConfig.ps1 -FortiGateHost "192.168.1.1" -ApiToken "YourApiTokenHere" -SkipCertificateCheck
+    .\Get_Forti_Gate_Config_Individual_Csv.ps1 -FortiGateHost "192.168.1.1" -ApiToken "YourApiTokenHere" -SkipCertificateCheck
 
 .EXAMPLE
     # Non-standard management port
-    .\Get-FortiGateConfig.ps1 -FortiGateHost "192.168.1.1" -ApiToken "YourApiTokenHere" -Port 8443 -SkipCertificateCheck
+    .\Get_Forti_Gate_Config_Individual_Csv.ps1 -FortiGateHost "192.168.1.1" -ApiToken "YourApiTokenHere" -Port 8443 -SkipCertificateCheck
 
 .EXAMPLE
     # Username and password instead of API token
-    .\Get-FortiGateConfig.ps1 -FortiGateHost "192.168.1.1" -Credential (Get-Credential) -SkipCertificateCheck
+    .\Get_Forti_Gate_Config_Individual_Csv.ps1 -FortiGateHost "192.168.1.1" -Credential (Get-Credential) -SkipCertificateCheck
 
 .EXAMPLE
     # Query a specific VDOM
-    .\Get-FortiGateConfig.ps1 -FortiGateHost "192.168.1.1" -ApiToken "YourApiTokenHere" -Vdom "CORP" -SkipCertificateCheck
+    .\Get_Forti_Gate_Config_Individual_Csv.ps1 -FortiGateHost "192.168.1.1" -ApiToken "YourApiTokenHere" -Vdom "CORP" -SkipCertificateCheck
 
 .NOTES
     Requires FortiOS 6.4+. Firewall policies, VIPs, and DNS require no extra permissions
