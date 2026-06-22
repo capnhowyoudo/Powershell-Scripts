@@ -55,10 +55,6 @@
     .\Get-FortiGateConfig.ps1 -FortiGateHost "192.168.1.1" -ApiToken "YourApiTokenHere" -Port 8443 -SkipCertificateCheck
 
 .EXAMPLE
-    # Full example with all common options
-    .\Get-FortiGateConfig.ps1 -FortiGateHost "FW_IP" -ApiToken "YourApiTokenHere" -Port 8443 -SkipCertificateCheck
-
-.EXAMPLE
     # Username and password instead of API token
     .\Get-FortiGateConfig.ps1 -FortiGateHost "192.168.1.1" -Credential (Get-Credential) -SkipCertificateCheck
 
