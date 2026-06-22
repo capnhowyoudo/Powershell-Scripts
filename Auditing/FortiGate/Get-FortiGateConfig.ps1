@@ -56,7 +56,7 @@
 
 .EXAMPLE
     # Full example with all common options
-    .\Get-FortiGateConfig.ps1 -FortiGateHost "192.168.1.1" -ApiToken "YourApiTokenHere" -Port 8443 -SkipCertificateCheck
+    .\Get-FortiGateConfig.ps1 -FortiGateHost "FW_IP" -ApiToken "YourApiTokenHere" -Port 8443 -SkipCertificateCheck
 
 .EXAMPLE
     # Username and password instead of API token
@@ -365,7 +365,7 @@ function Get-SafeCount {
 # Collect interfaces and VLANs
 # ---------------------------------------------------------------------------
 function Get-Interfaces {
-    Write-Host "`n[1/8] Collecting network interfaces..." -ForegroundColor Yellow
+    Write-Host "`n[1/11] Collecting network interfaces..." -ForegroundColor Yellow
     $raw = Invoke-FgApi -Path '/cmdb/system/interface'
 
     $standard = @()
@@ -422,7 +422,7 @@ function Get-Interfaces {
 # Collect IPsec VPN
 # ---------------------------------------------------------------------------
 function Get-IpsecVpn {
-    Write-Host "`n[2/8] Collecting IPsec VPN configurations..." -ForegroundColor Yellow
+    Write-Host "`n[2/11] Collecting IPsec VPN configurations..." -ForegroundColor Yellow
 
     $ph1Raw = Invoke-FgApi -Path '/cmdb/vpn.ipsec/phase1-interface'
     $phase1 = @()
@@ -478,7 +478,7 @@ function Get-IpsecVpn {
 # Collect SSL/OpenVPN
 # ---------------------------------------------------------------------------
 function Get-SslVpn {
-    Write-Host "`n[3/8] Collecting SSL/OpenVPN configurations..." -ForegroundColor Yellow
+    Write-Host "`n[3/11] Collecting SSL/OpenVPN configurations..." -ForegroundColor Yellow
 
     $settingsRaw = Invoke-FgApi -Path '/cmdb/vpn.ssl/settings'
     $settings    = $null
@@ -537,7 +537,7 @@ function Get-SslVpn {
 # Collect WireGuard
 # ---------------------------------------------------------------------------
 function Get-WireGuard {
-    Write-Host "`n[4/8] Collecting WireGuard configurations..." -ForegroundColor Yellow
+    Write-Host "`n[4/11] Collecting WireGuard configurations..." -ForegroundColor Yellow
 
     $wgRaw = Invoke-FgApi -Path '/cmdb/vpn.wireguard/profile'
 
@@ -584,7 +584,7 @@ function Get-WireGuard {
 # Collect Firewall Policies
 # ---------------------------------------------------------------------------
 function Get-FirewallPolicy {
-    Write-Host "`n[5/8] Collecting firewall policies..." -ForegroundColor Yellow
+    Write-Host "`n[5/11] Collecting firewall policies..." -ForegroundColor Yellow
 
     $raw = Invoke-FgApi -Path '/cmdb/firewall/policy'
     $policies = @()
@@ -642,7 +642,7 @@ function Get-FirewallPolicy {
 # Collect Virtual IPs (VIPs / DNAT)
 # ---------------------------------------------------------------------------
 function Get-VirtualIPs {
-    Write-Host "`n[6/8] Collecting virtual IPs..." -ForegroundColor Yellow
+    Write-Host "`n[6/11] Collecting virtual IPs..." -ForegroundColor Yellow
 
     $raw  = Invoke-FgApi -Path '/cmdb/firewall/vip'
     $vips = @()
@@ -696,7 +696,7 @@ function Get-VirtualIPs {
 # Collect DNS configuration
 # ---------------------------------------------------------------------------
 function Get-DnsConfig {
-    Write-Host "`n[7/8] Collecting DNS configuration..." -ForegroundColor Yellow
+    Write-Host "`n[7/11] Collecting DNS configuration..." -ForegroundColor Yellow
 
     # Global DNS settings
     $settingsRaw = Invoke-FgApi -Path '/cmdb/system/dns'
@@ -792,7 +792,7 @@ function Get-DnsConfig {
 # Collect DHCP configuration
 # ---------------------------------------------------------------------------
 function Get-DhcpConfig {
-    Write-Host "`n[8/8] Collecting DHCP configuration..." -ForegroundColor Yellow
+    Write-Host "`n[8/11] Collecting DHCP configuration..." -ForegroundColor Yellow
 
     $raw     = Invoke-FgApi -Path '/cmdb/system.dhcp/server'
     $servers = @()
@@ -898,6 +898,196 @@ function Get-DhcpConfig {
 }
 
 # ---------------------------------------------------------------------------
+# Collect User Definitions
+# ---------------------------------------------------------------------------
+function Get-UserDefinitions {
+    Write-Host "`n[9/11] Collecting user definitions..." -ForegroundColor Yellow
+
+    # Local users
+    $localRaw = Invoke-FgApi -Path '/cmdb/user/local'
+    $local    = @()
+    if ($localRaw) {
+        foreach ($u in $localRaw) {
+            $local += [PSCustomObject]@{
+                Name          = $u.name
+                Status        = $u.status
+                Type          = $u.type
+                EmailTo       = $u.'email-to'
+                MobileNumber  = $u.'sms-phone'
+                TwoFactor     = $u.'two-factor'
+                TwoFactorAuth = $u.'two-factor-authentication'
+                RadiusServer  = $u.'radius-server'
+                LdapServer    = $u.'ldap-server'
+                TacacsServer  = $u.'tacacs+-server'
+                Fortitoken    = $u.fortitoken
+                PasswdPolicy  = $u.'passwd-policy'
+                PasswdTime    = $u.'passwd-time'
+                AuthConcurrent = $u.'authtimeout'
+            }
+        }
+        Write-Host ('  Found ' + $local.Count + ' local user(s).') -ForegroundColor Green
+    } else {
+        Write-Warning '  No local user data returned.'
+    }
+
+    # LDAP users
+    $ldapRaw = Invoke-FgApi -Path '/cmdb/user/ldap'
+    $ldap    = @()
+    if ($ldapRaw) {
+        foreach ($u in $ldapRaw) {
+            $ldap += [PSCustomObject]@{
+                Name           = $u.name
+                Server         = $u.server
+                SecondaryServer = $u.'secondary-server'
+                TertiaryServer = $u.'tertiary-server'
+                Port           = $u.port
+                CnId           = $u.'cnid'
+                Dn             = $u.dn
+                Type           = $u.type
+                Username       = $u.username
+                Secure         = $u.secure
+                CaCert         = $u.'ca-cert'
+                SearchType     = $u.'search-type'
+                GroupMemberCheck = $u.'group-member-check'
+                GroupFilter    = $u.'group-filter'
+                GroupObjectFilter = $u.'group-object-filter'
+            }
+        }
+        Write-Host ('  Found ' + $ldap.Count + ' LDAP server definition(s).') -ForegroundColor Green
+    }
+
+    # TACACS+ users
+    $tacacsRaw = Invoke-FgApi -Path '/cmdb/user/tacacs+'
+    $tacacs    = @()
+    if ($tacacsRaw) {
+        foreach ($u in $tacacsRaw) {
+            $tacacs += [PSCustomObject]@{
+                Name            = $u.name
+                Server          = $u.server
+                SecondaryServer = $u.'secondary-server'
+                TertiaryServer  = $u.'tertiary-server'
+                Port            = $u.port
+                Authen          = $u.authen
+                Authorization   = $u.authorization
+                Accounting      = $u.accounting
+                KeySet          = if ($u.key) { 'Yes (set)' } else { 'No' }
+            }
+        }
+        Write-Host ('  Found ' + $tacacs.Count + ' TACACS+ server definition(s).') -ForegroundColor Green
+    }
+
+    return [PSCustomObject]@{
+        LocalUsers  = $local
+        LdapServers = $ldap
+        TacacsServers = $tacacs
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Collect User Groups
+# ---------------------------------------------------------------------------
+function Get-UserGroups {
+    Write-Host "`n[10/11] Collecting user groups..." -ForegroundColor Yellow
+
+    $raw    = Invoke-FgApi -Path '/cmdb/user/group'
+    $groups = @()
+
+    if ($raw) {
+        foreach ($g in $raw) {
+            # Members (local users, LDAP/RADIUS/TACACS refs)
+            $members = @()
+            if ($g.member) {
+                foreach ($m in $g.member) { $members += $m.name }
+            }
+
+            # Match rules (used for RADIUS/LDAP group matching)
+            $matchRules = @()
+            if ($g.match) {
+                foreach ($r in $g.match) {
+                    $matchRules += ($r.'server-name' + ':' + $r.'group-name')
+                }
+            }
+
+            $groups += [PSCustomObject]@{
+                Name        = $g.name
+                Type        = $g.'group-type'
+                AuthTimeout = $g.authtimeout
+                HttpDigest  = $g.'http-digest-realm'
+                Members     = $members -join '; '
+                MatchRules  = $matchRules -join '; '
+            }
+        }
+        Write-Host ('  Found ' + $groups.Count + ' user group(s).') -ForegroundColor Green
+    } else {
+        Write-Warning '  No user group data returned.'
+    }
+
+    return $groups
+}
+
+# ---------------------------------------------------------------------------
+# Collect RADIUS Servers
+# ---------------------------------------------------------------------------
+function Get-RadiusServers {
+    Write-Host "`n[11/11] Collecting RADIUS servers..." -ForegroundColor Yellow
+
+    $raw     = Invoke-FgApi -Path '/cmdb/user/radius'
+    $servers = @()
+
+    if ($raw) {
+        foreach ($r in $raw) {
+            # Secondary and tertiary servers
+            $secondary = ''
+            $tertiary  = ''
+            if ($r.'secondary-server') { $secondary = $r.'secondary-server' }
+            if ($r.'tertiary-server')  { $tertiary  = $r.'tertiary-server' }
+
+            # Accounting servers
+            $acctServers = @()
+            if ($r.'acct-server') {
+                foreach ($a in $r.'acct-server') {
+                    $acctServers += ($a.server + ':' + $a.port)
+                }
+            }
+
+            # Attribute entries
+            $attributes = @()
+            if ($r.'radius-attribute') {
+                foreach ($a in $r.'radius-attribute') {
+                    $attributes += ('Type:' + $a.type + '=' + $a.value)
+                }
+            }
+
+            $servers += [PSCustomObject]@{
+                Name              = $r.name
+                Server            = $r.server
+                SecondaryServer   = $secondary
+                TertiaryServer    = $tertiary
+                Port              = $r.'auth-type'
+                AuthType          = $r.'auth-type'
+                SecretSet         = if ($r.secret) { 'Yes (set)' } else { 'No' }
+                Timeout           = $r.timeout
+                Retransmit        = $r.retransmit
+                NasIp             = $r.'nas-ip'
+                NasId             = $r.'nas-id'
+                NasIdType         = $r.'nas-id-type'
+                AcctAllServers    = $r.'acct-all-servers'
+                AccountingServers = $acctServers -join '; '
+                Attributes        = $attributes -join '; '
+                SsoAttributeKey   = $r.'sso-attribute-key'
+                SsoAttributeValue = $r.'sso-attribute-value-override'
+                RssoEndpointBlock = $r.'rsso-endpoint-block'
+            }
+        }
+        Write-Host ('  Found ' + $servers.Count + ' RADIUS server(s).') -ForegroundColor Green
+    } else {
+        Write-Warning '  No RADIUS server data returned.'
+    }
+
+    return $servers
+}
+
+# ---------------------------------------------------------------------------
 # Display helpers
 # ---------------------------------------------------------------------------
 function Show-Section {
@@ -936,14 +1126,17 @@ if (-not $connected) {
 }
 
 # Collect
-$ifaceResult = Get-Interfaces
-$ipsec       = Get-IpsecVpn
-$sslvpn      = Get-SslVpn
-$wireguard   = Get-WireGuard
-$fwPolicy    = Get-FirewallPolicy
-$vipResult   = Get-VirtualIPs
-$dnsResult   = Get-DnsConfig
-$dhcpResult  = Get-DhcpConfig
+$ifaceResult  = Get-Interfaces
+$ipsec        = Get-IpsecVpn
+$sslvpn       = Get-SslVpn
+$wireguard    = Get-WireGuard
+$fwPolicy     = Get-FirewallPolicy
+$vipResult    = Get-VirtualIPs
+$dnsResult    = Get-DnsConfig
+$dhcpResult   = Get-DhcpConfig
+$userResult   = Get-UserDefinitions
+$userGroups   = Get-UserGroups
+$radiusResult = Get-RadiusServers
 
 # Display
 Show-InterfacesTable -Interfaces $ifaceResult.Standard -Title 'Standard Network Interfaces'
@@ -1033,6 +1226,31 @@ Show-Section -Title 'DHCP Custom Options'
 $dhcpOptCount = Get-SafeCount -Collection $dhcpResult.Options
 if ($dhcpOptCount -eq 0) { Write-Host "  (none)" }
 else { $dhcpResult.Options | Format-Table -AutoSize ServerId, ServerInterface, Code, Type, Value }
+
+Show-Section -Title 'Users - Local'
+$localUserCount = Get-SafeCount -Collection $userResult.LocalUsers
+if ($localUserCount -eq 0) { Write-Host "  (none)" }
+else { $userResult.LocalUsers | Format-Table -AutoSize Name, Status, Type, TwoFactor, RadiusServer, LdapServer, EmailTo }
+
+Show-Section -Title 'Users - LDAP Servers'
+$ldapCount = Get-SafeCount -Collection $userResult.LdapServers
+if ($ldapCount -eq 0) { Write-Host "  (none)" }
+else { $userResult.LdapServers | Format-Table -AutoSize Name, Server, Port, Dn, Type, Secure, GroupMemberCheck }
+
+Show-Section -Title 'Users - TACACS+ Servers'
+$tacacsCount = Get-SafeCount -Collection $userResult.TacacsServers
+if ($tacacsCount -eq 0) { Write-Host "  (none)" }
+else { $userResult.TacacsServers | Format-Table -AutoSize Name, Server, Port, Authen, Authorization, Accounting, KeySet }
+
+Show-Section -Title 'User Groups'
+$groupCount = Get-SafeCount -Collection $userGroups
+if ($groupCount -eq 0) { Write-Host "  (none)" }
+else { $userGroups | Format-Table -AutoSize Name, Type, AuthTimeout, Members, MatchRules }
+
+Show-Section -Title 'RADIUS Servers'
+$radiusCount = Get-SafeCount -Collection $radiusResult
+if ($radiusCount -eq 0) { Write-Host "  (none)" }
+else { $radiusResult | Format-Table -AutoSize Name, Server, SecondaryServer, Port, AuthType, SecretSet, Timeout, NasIp, AccountingServers }
 
 # ---------------------------------------------------------------------------
 # CSV Export - one file per section in C:\Temp
@@ -1204,6 +1422,31 @@ Export-ToCsv -Data $dhcpResult.Reservations `
 Export-ToCsv -Data $dhcpResult.Options `
              -Label 'DHCP Custom Options' `
              -FilePath ($filePrefix + '_dhcp_options.csv')
+
+# Local Users
+Export-ToCsv -Data $userResult.LocalUsers `
+             -Label 'Local Users' `
+             -FilePath ($filePrefix + '_users_local.csv')
+
+# LDAP Server Definitions
+Export-ToCsv -Data $userResult.LdapServers `
+             -Label 'LDAP Servers' `
+             -FilePath ($filePrefix + '_users_ldap.csv')
+
+# TACACS+ Server Definitions
+Export-ToCsv -Data $userResult.TacacsServers `
+             -Label 'TACACS+ Servers' `
+             -FilePath ($filePrefix + '_users_tacacs.csv')
+
+# User Groups
+Export-ToCsv -Data $userGroups `
+             -Label 'User Groups' `
+             -FilePath ($filePrefix + '_user_groups.csv')
+
+# RADIUS Servers
+Export-ToCsv -Data $radiusResult `
+             -Label 'RADIUS Servers' `
+             -FilePath ($filePrefix + '_radius_servers.csv')
 
 Write-Host "`n============================================================" -ForegroundColor Magenta
 Write-Host "  Collection complete." -ForegroundColor Magenta
