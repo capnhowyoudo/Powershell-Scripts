@@ -4,16 +4,56 @@
     Retrieves network interfaces, VLANs, and VPN configurations from a FortiGate firewall.
 
 .DESCRIPTION
-    Connects to the FortiGate REST API and collects:
-      - Standard network interfaces (IP, subnet, parent interface)
-      - VLANs (tag, description, parent interface, IP/subnet)
-      - IPsec VPN Phase 1 and Phase 2 configurations
-      - SSL/OpenVPN server configurations
-      - WireGuard peer configurations
-      - Firewall policies
-      - Virtual IPs (DNAT) and VIP groups
-      - DNS settings, zones, and static entries
-    Results are exported as CSV files to C:\Temp automatically.
+    Connects to the FortiGate REST API and collects the following data,
+    exporting each section as a separate CSV file to C:\Temp:
+
+    SYSTEM
+      - System information (hostname, serial number, model, firmware,
+        build number, operation mode, system time, uptime, WAN IP)
+
+    NETWORK
+      - Standard network interfaces (IP address, subnet, MAC, speed,
+        MTU, zone, allowed access, secondary IPs)
+      - VLANs (VLAN ID, parent interface, IP/subnet, description, status)
+
+    VPN
+      - IPsec VPN Phase 1 (tunnel name, IKE version, interface, remote
+        gateway, proposal, DH group, auth method)
+      - IPsec VPN Phase 2 (selectors, src/dst subnets, proposal, DH group)
+      - SSL/OpenVPN global settings (listen port, interface, IP pools)
+      - SSL/OpenVPN portals (tunnel mode, web mode, split tunneling)
+
+    FIREWALL
+      - Firewall policies (policy ID, name, action, src/dst interfaces,
+        src/dst addresses, services, NAT, logging, security profiles)
+      - Virtual IPs - DNAT (external IP, mapped IP, port forwarding)
+      - VIP groups (members, interface)
+
+    DNS
+      - Global DNS settings (primary/secondary resolvers, cache, domain)
+      - DNS server interfaces (mode, filter profile)
+      - DNS zones (type, TTL, primary name server)
+      - DNS static entries (hostname-to-IP mappings)
+
+    DHCP
+      - DHCP servers (interface, gateway, netmask, lease time, DNS, NTP)
+      - DHCP IP ranges (start/end IP per server)
+      - DHCP reservations (MAC-to-IP static assignments)
+      - DHCP custom options (option code, type, value)
+
+    USERS AND AUTHENTICATION
+      - Local users (status, type, 2FA, linked RADIUS/LDAP server)
+      - LDAP server definitions (server, port, base DN, group matching)
+      - TACACS+ server definitions (server, port, auth/accounting settings)
+      - User groups (type, members, RADIUS/LDAP match rules)
+      - RADIUS servers (primary/secondary servers, auth type, NAS IP,
+        accounting servers, VSA attributes)
+
+    CONNECTED DEVICES
+      - ARP table (IP-to-MAC mappings, interface, entry type)
+      - Active DHCP leases (IP, MAC, hostname, expiry time)
+      - Device inventory (OS, device type, vendor, first/last seen)
+      - Active sessions aggregated by source IP (session count, protocols)
 
 .PARAMETER FortiGateHost
     The IP address or hostname of the FortiGate firewall.
