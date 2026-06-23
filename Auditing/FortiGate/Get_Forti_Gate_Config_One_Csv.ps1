@@ -4,56 +4,16 @@
     Retrieves network interfaces, VLANs, and VPN configurations from a FortiGate firewall.
 
 .DESCRIPTION
-    Connects to the FortiGate REST API and collects the following data,
-    exporting each section as a separate CSV file to C:\Temp:
-
-    SYSTEM
-      - System information (hostname, serial number, model, firmware,
-        build number, operation mode, system time, uptime, WAN IP)
-
-    NETWORK
-      - Standard network interfaces (IP address, subnet, MAC, speed,
-        MTU, zone, allowed access, secondary IPs)
-      - VLANs (VLAN ID, parent interface, IP/subnet, description, status)
-
-    VPN
-      - IPsec VPN Phase 1 (tunnel name, IKE version, interface, remote
-        gateway, proposal, DH group, auth method)
-      - IPsec VPN Phase 2 (selectors, src/dst subnets, proposal, DH group)
-      - SSL/OpenVPN global settings (listen port, interface, IP pools)
-      - SSL/OpenVPN portals (tunnel mode, web mode, split tunneling)
-
-    FIREWALL
-      - Firewall policies (policy ID, name, action, src/dst interfaces,
-        src/dst addresses, services, NAT, logging, security profiles)
-      - Virtual IPs - DNAT (external IP, mapped IP, port forwarding)
-      - VIP groups (members, interface)
-
-    DNS
-      - Global DNS settings (primary/secondary resolvers, cache, domain)
-      - DNS server interfaces (mode, filter profile)
-      - DNS zones (type, TTL, primary name server)
-      - DNS static entries (hostname-to-IP mappings)
-
-    DHCP
-      - DHCP servers (interface, gateway, netmask, lease time, DNS, NTP)
-      - DHCP IP ranges (start/end IP per server)
-      - DHCP reservations (MAC-to-IP static assignments)
-      - DHCP custom options (option code, type, value)
-
-    USERS AND AUTHENTICATION
-      - Local users (status, type, 2FA, linked RADIUS/LDAP server)
-      - LDAP server definitions (server, port, base DN, group matching)
-      - TACACS+ server definitions (server, port, auth/accounting settings)
-      - User groups (type, members, RADIUS/LDAP match rules)
-      - RADIUS servers (primary/secondary servers, auth type, NAS IP,
-        accounting servers, VSA attributes)
-
-    CONNECTED DEVICES
-      - ARP table (IP-to-MAC mappings, interface, entry type)
-      - Active DHCP leases (IP, MAC, hostname, expiry time)
-      - Device inventory (OS, device type, vendor, first/last seen)
-      - Active sessions aggregated by source IP (session count, protocols)
+    Connects to the FortiGate REST API and collects:
+      - Standard network interfaces (IP, subnet, parent interface)
+      - VLANs (tag, description, parent interface, IP/subnet)
+      - IPsec VPN Phase 1 and Phase 2 configurations
+      - SSL/OpenVPN server configurations
+      - Connected devices (ARP table, DHCP leases, active sessions)
+      - Firewall policies
+      - Virtual IPs (DNAT) and VIP groups
+      - DNS settings, zones, and static entries
+    Results are exported as CSV files to C:\Temp automatically.
 
 .PARAMETER FortiGateHost
     The IP address or hostname of the FortiGate firewall.
@@ -402,10 +362,173 @@ function Get-SafeCount {
 }
 
 # ---------------------------------------------------------------------------
+# Collect System Information
+# ---------------------------------------------------------------------------
+function Get-SystemInfo {
+    Write-Host "`n[1/12] Collecting system information..." -ForegroundColor Yellow
+
+    # /monitor/system/status returns data as TOP-LEVEL properties on the response
+    # object (not inside .results like CMDB endpoints do). We must call
+    # Invoke-RestMethod directly and read from the root of the response.
+    $mon = $null
+    try {
+        $uri     = 'https://' + $FortiGateHost + ':' + $Port + '/api/v2/monitor/system/status?vdom=' + $Vdom
+        $headers = @{}
+        if ($PSCmdlet.ParameterSetName -eq 'Token') { $headers['Authorization'] = 'Bearer ' + $ApiToken }
+        $splat = @{ Uri = $uri; Method = 'GET'; Headers = $headers }
+        if ($PSCmdlet.ParameterSetName -eq 'Credential') { $splat['WebSession'] = $script:FgSession }
+        if ($SkipCertificateCheck -and $PSVersionTable.PSVersion.Major -ge 7) { $splat['SkipCertificateCheck'] = $true }
+        $mon = Invoke-RestMethod @splat
+    } catch {
+        Write-Warning ('  /monitor/system/status failed: ' + $_.Exception.Message)
+    }
+
+    # /cmdb/system/global supplies hostname, opmode, timezone
+    $globalRaw = Invoke-FgApi -Path '/cmdb/system/global'
+    $global = $null
+    if ($globalRaw) {
+        if ($globalRaw -is [array]) { $global = $globalRaw[0] } else { $global = $globalRaw }
+    }
+
+    # ---- Helper: read a value safely from an object by trying several key names
+    function Read-Field {
+        param($Obj, [string[]]$Keys)
+        foreach ($k in $Keys) {
+            if ($null -eq $Obj) { continue }
+            $props = $Obj.PSObject.Properties.Name
+            if ($props -contains $k) {
+                $v = $Obj.$k
+                if ($null -ne $v -and [string]$v -ne '') { return [string]$v }
+            }
+        }
+        return ''
+    }
+
+    # ---- Pull from /monitor/system/status (top-level response properties)
+    # These fields ARE present in the response (serial/version/build/hostname/uptime confirmed working)
+    $serial    = Read-Field $mon @('serial')
+    $firmware  = Read-Field $mon @('version')
+    $buildNum  = Read-Field $mon @('build')
+    $hostname  = Read-Field $mon @('hostname','host_name')
+    $uptimeSec = Read-Field $mon @('uptime','sys_uptime')
+
+    # model_name / system_time / op_mode are NOT present on all FortiOS versions
+    # in the monitor endpoint - pull from cmdb/system/global and cmdb/system/status instead
+    $model   = Read-Field $mon @('model_name','model','platform_id','platform_full_name')
+    $sysTime = Read-Field $mon @('system_time','sys_time','current_time')
+    $opModeRaw = Read-Field $mon @('op_mode','opmode','operation_mode')
+
+    # Uptime -> human readable
+    $uptimeStr = ''
+    if ($uptimeSec -ne '') {
+        try {
+            $sec     = [int]$uptimeSec
+            $days    = [math]::Floor($sec / 86400)
+            $hours   = [math]::Floor(($sec % 86400) / 3600)
+            $minutes = [math]::Floor(($sec % 3600) / 60)
+            $uptimeStr = ($days.ToString() + 'd ' + $hours.ToString() + 'h ' + $minutes.ToString() + 'm')
+        } catch {}
+    }
+
+    # ---- Fill gaps from /cmdb/system/global
+    # hostname, opmode are reliably present here
+    if ($global) {
+        if ($hostname -eq '') { $hostname = Read-Field $global @('hostname') }
+        if ($model    -eq '') { $model    = Read-Field $global @('model_name','alias') }
+        if ($opModeRaw -eq '') { $opModeRaw = Read-Field $global @('opmode','operation-mode') }
+    }
+
+    # ---- System time fallback: use PowerShell to query SNMP-style or just use current
+    # FortiOS cmdb/system/ntp or monitor/system/time
+    if ($sysTime -eq '') {
+        try {
+            $timeUri = 'https://' + $FortiGateHost + ':' + $Port + '/api/v2/monitor/system/time?vdom=' + $Vdom
+            $tHeaders = @{}
+            if ($PSCmdlet.ParameterSetName -eq 'Token') { $tHeaders['Authorization'] = 'Bearer ' + $ApiToken }
+            $tSplat = @{ Uri = $timeUri; Method = 'GET'; Headers = $tHeaders }
+            if ($PSCmdlet.ParameterSetName -eq 'Credential') { $tSplat['WebSession'] = $script:FgSession }
+            if ($SkipCertificateCheck -and $PSVersionTable.PSVersion.Major -ge 7) { $tSplat['SkipCertificateCheck'] = $true }
+            $timeRaw = Invoke-RestMethod @tSplat
+            if ($timeRaw) {
+                $sysTime = Read-Field $timeRaw @('time','datetime','current_time','system_time')
+                if ($sysTime -eq '' -and $timeRaw.results) {
+                    $sysTime = Read-Field $timeRaw.results @('time','datetime','current_time','system_time')
+                }
+            }
+        } catch {}
+    }
+
+    # ---- Mode
+    $mode = ''
+    if     ($opModeRaw -eq '0' -or $opModeRaw -eq 'nat')         { $mode = 'NAT' }
+    elseif ($opModeRaw -eq '1' -or $opModeRaw -eq 'transparent') { $mode = 'Transparent' }
+    elseif ($opModeRaw -ne '')                                    { $mode = $opModeRaw }
+
+    # ---- WAN IP: use already-collected interfaces (passed in) to avoid a second API call
+    # Filter: must have a real non-zero IP, skip loopback/VLAN/tunnel types
+    $wanIp = ''
+    $allIfaces = Invoke-FgApi -Path '/cmdb/system/interface'
+    if ($allIfaces) {
+        $wanPriority = @()
+        $wanFallback = @()
+        foreach ($iface in $allIfaces) {
+            $ifName = [string]$iface.name
+            $ifRole = [string]$iface.role
+            $ifType = [string]$iface.type
+            $ifIp   = [string]$iface.ip
+            $ifMask = [string]$iface.netmask
+
+            # Skip if no real IP or loopback/tunnel/aggregate with no IP
+            if ($ifIp -eq '' -or $ifIp -eq '0.0.0.0 0.0.0.0' -or $ifIp -eq '0.0.0.0') { continue }
+            if ($ifType -eq 'loopback') { continue }
+
+            # FortiOS stores ip as "x.x.x.x" and netmask separately
+            # Some versions store as "x.x.x.x y.y.y.y" space-separated in one field
+            $cleanIp = $ifIp
+            if ($ifIp -match ' ') {
+                $parts   = $ifIp -split ' '
+                $cleanIp = $parts[0]
+                if ($ifMask -eq '' -or $ifMask -eq '0.0.0.0') { $ifMask = $parts[1] }
+            }
+            if ($cleanIp -eq '0.0.0.0') { continue }
+
+            $cidr     = ConvertTo-CidrMask -DottedMask $ifMask
+            $ipWithCidr = $cleanIp + '/' + $cidr + ' (' + $ifName + ')'
+
+            # Role=wan or name matches wan pattern = highest priority
+            if ($ifRole -eq 'wan' -or $ifName -match '^wan') {
+                $wanPriority += $ipWithCidr
+            } elseif ($ifName -match '^(ppp|dialer|internet|INTERNET)' -or $ifType -eq 'pppoe') {
+                $wanFallback += $ipWithCidr
+            }
+        }
+        $allWan = $wanPriority + $wanFallback
+        if ($allWan.Count -gt 0) { $wanIp = $allWan -join ' | ' }
+    }
+
+    $sysInfo = [PSCustomObject]@{
+        Hostname     = $hostname
+        SerialNumber = $serial
+        Model        = $model
+        Firmware     = $firmware
+        BuildNumber  = $buildNum
+        Mode         = $mode
+        SystemTime   = $sysTime
+        Uptime       = $uptimeStr
+        WanIp        = $wanIp
+        Vdom         = $Vdom
+        CollectedAt  = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+    }
+
+    Write-Host ('  Hostname: ' + $hostname + '  Serial: ' + $serial + '  Firmware: ' + $firmware) -ForegroundColor Green
+    return $sysInfo
+}
+
+# ---------------------------------------------------------------------------
 # Collect interfaces and VLANs
 # ---------------------------------------------------------------------------
 function Get-Interfaces {
-    Write-Host "`n[1/11] Collecting network interfaces..." -ForegroundColor Yellow
+    Write-Host "`n[2/12] Collecting network interfaces..." -ForegroundColor Yellow
     $raw = Invoke-FgApi -Path '/cmdb/system/interface'
 
     $standard = @()
@@ -462,7 +585,7 @@ function Get-Interfaces {
 # Collect IPsec VPN
 # ---------------------------------------------------------------------------
 function Get-IpsecVpn {
-    Write-Host "`n[2/11] Collecting IPsec VPN configurations..." -ForegroundColor Yellow
+    Write-Host "`n[3/12] Collecting IPsec VPN configurations..." -ForegroundColor Yellow
 
     $ph1Raw = Invoke-FgApi -Path '/cmdb/vpn.ipsec/phase1-interface'
     $phase1 = @()
@@ -518,7 +641,7 @@ function Get-IpsecVpn {
 # Collect SSL/OpenVPN
 # ---------------------------------------------------------------------------
 function Get-SslVpn {
-    Write-Host "`n[3/11] Collecting SSL/OpenVPN configurations..." -ForegroundColor Yellow
+    Write-Host "`n[4/12] Collecting SSL/OpenVPN configurations..." -ForegroundColor Yellow
 
     $settingsRaw = Invoke-FgApi -Path '/cmdb/vpn.ssl/settings'
     $settings    = $null
@@ -574,57 +697,10 @@ function Get-SslVpn {
 }
 
 # ---------------------------------------------------------------------------
-# Collect WireGuard
-# ---------------------------------------------------------------------------
-function Get-WireGuard {
-    Write-Host "`n[4/11] Collecting WireGuard configurations..." -ForegroundColor Yellow
-
-    $wgRaw = Invoke-FgApi -Path '/cmdb/vpn.wireguard/profile'
-
-    if (-not $wgRaw) {
-        Write-Warning "  No WireGuard API endpoint found (requires FortiOS 7.2+); checking interfaces..."
-        $allIfaces = Invoke-FgApi -Path '/cmdb/system/interface'
-        if ($allIfaces) {
-            $wgRaw = @($allIfaces | Where-Object { $_.type -eq 'tunnel' -and $_.'tunnel-type' -eq 'wireguard' })
-        }
-    }
-
-    $profiles = @()
-    if ($wgRaw) {
-        foreach ($w in $wgRaw) {
-            $peers = @()
-            if ($w.peers) {
-                foreach ($peer in $w.peers) {
-                    $psk = '(none)'
-                    if ($peer.'preshared-key') { $psk = '*** (set)' }
-                    $peers += [PSCustomObject]@{
-                        Name                = $peer.name
-                        PublicKey           = $peer.'public-key'
-                        PresharedKey        = $psk
-                        AllowedIps          = $peer.'allowed-ips'
-                        Endpoint            = $peer.'endpoint'
-                        PersistentKeepalive = $peer.'persistent-keepalive'
-                    }
-                }
-            }
-            $profiles += [PSCustomObject]@{
-                Name       = $w.name
-                ListenPort = $w.'listen-port'
-                LocalIp    = $w.ip
-                Peers      = $peers
-            }
-        }
-    }
-
-    Write-Host ('  Found ' + $profiles.Count + ' WireGuard profile(s).') -ForegroundColor Green
-    return $profiles
-}
-
-# ---------------------------------------------------------------------------
 # Collect Firewall Policies
 # ---------------------------------------------------------------------------
 function Get-FirewallPolicy {
-    Write-Host "`n[5/11] Collecting firewall policies..." -ForegroundColor Yellow
+    Write-Host "`n[5/12] Collecting firewall policies..." -ForegroundColor Yellow
 
     $raw = Invoke-FgApi -Path '/cmdb/firewall/policy'
     $policies = @()
@@ -682,7 +758,7 @@ function Get-FirewallPolicy {
 # Collect Virtual IPs (VIPs / DNAT)
 # ---------------------------------------------------------------------------
 function Get-VirtualIPs {
-    Write-Host "`n[6/11] Collecting virtual IPs..." -ForegroundColor Yellow
+    Write-Host "`n[6/12] Collecting virtual IPs..." -ForegroundColor Yellow
 
     $raw  = Invoke-FgApi -Path '/cmdb/firewall/vip'
     $vips = @()
@@ -736,7 +812,7 @@ function Get-VirtualIPs {
 # Collect DNS configuration
 # ---------------------------------------------------------------------------
 function Get-DnsConfig {
-    Write-Host "`n[7/11] Collecting DNS configuration..." -ForegroundColor Yellow
+    Write-Host "`n[7/12] Collecting DNS configuration..." -ForegroundColor Yellow
 
     # Global DNS settings
     $settingsRaw = Invoke-FgApi -Path '/cmdb/system/dns'
@@ -832,7 +908,7 @@ function Get-DnsConfig {
 # Collect DHCP configuration
 # ---------------------------------------------------------------------------
 function Get-DhcpConfig {
-    Write-Host "`n[8/11] Collecting DHCP configuration..." -ForegroundColor Yellow
+    Write-Host "`n[8/12] Collecting DHCP configuration..." -ForegroundColor Yellow
 
     $raw     = Invoke-FgApi -Path '/cmdb/system.dhcp/server'
     $servers = @()
@@ -941,7 +1017,7 @@ function Get-DhcpConfig {
 # Collect User Definitions
 # ---------------------------------------------------------------------------
 function Get-UserDefinitions {
-    Write-Host "`n[9/11] Collecting user definitions..." -ForegroundColor Yellow
+    Write-Host "`n[9/12] Collecting user definitions..." -ForegroundColor Yellow
 
     # Local users
     $localRaw = Invoke-FgApi -Path '/cmdb/user/local'
@@ -1027,7 +1103,7 @@ function Get-UserDefinitions {
 # Collect User Groups
 # ---------------------------------------------------------------------------
 function Get-UserGroups {
-    Write-Host "`n[10/11] Collecting user groups..." -ForegroundColor Yellow
+    Write-Host "`n[10/12] Collecting user groups..." -ForegroundColor Yellow
 
     $raw    = Invoke-FgApi -Path '/cmdb/user/group'
     $groups = @()
@@ -1069,7 +1145,7 @@ function Get-UserGroups {
 # Collect RADIUS Servers
 # ---------------------------------------------------------------------------
 function Get-RadiusServers {
-    Write-Host "`n[11/11] Collecting RADIUS servers..." -ForegroundColor Yellow
+    Write-Host "`n[11/12] Collecting RADIUS servers..." -ForegroundColor Yellow
 
     $raw     = Invoke-FgApi -Path '/cmdb/user/radius'
     $servers = @()
@@ -1128,6 +1204,135 @@ function Get-RadiusServers {
 }
 
 # ---------------------------------------------------------------------------
+# Collect Connected Devices (ARP, DHCP leases, active clients)
+# ---------------------------------------------------------------------------
+function Get-ConnectedDevices {
+    Write-Host "`n[12/12] Collecting connected devices..." -ForegroundColor Yellow
+
+    # ARP table - layer 2 to layer 3 mappings seen by the firewall
+    $arpRaw = Invoke-FgApi -Path '/monitor/network/arp'
+    $arp    = @()
+    if ($arpRaw) {
+        foreach ($a in $arpRaw) {
+            $arp += [PSCustomObject]@{
+                IpAddress   = $a.ip
+                MacAddress  = $a.mac
+                Interface   = $a.interface
+                Type        = $a.type
+                Status      = $a.status
+            }
+        }
+        Write-Host ('  Found ' + $arp.Count + ' ARP entry/entries.') -ForegroundColor Green
+    } else {
+        Write-Warning '  No ARP data returned.'
+    }
+
+    # Active DHCP leases - devices currently holding a lease
+    $leasesRaw = Invoke-FgApi -Path '/monitor/system/dhcp'
+    $leases    = @()
+    if ($leasesRaw) {
+        foreach ($l in $leasesRaw) {
+            $leases += [PSCustomObject]@{
+                IpAddress   = $l.ip
+                MacAddress  = $l.mac
+                Hostname    = $l.hostname
+                Interface   = $l.interface
+                VlanId      = $l.'vci'
+                Status      = $l.status
+                ExpireTime  = $l.'expire-time'
+                ServerName  = $l.'dhcp-server-name'
+            }
+        }
+        Write-Host ('  Found ' + $leases.Count + ' active DHCP lease(s).') -ForegroundColor Green
+    } else {
+        Write-Warning '  No DHCP lease data returned.'
+    }
+
+    # Device table - FortiGate detected/learned device inventory
+    $devRaw = Invoke-FgApi -Path '/monitor/user/device'
+    $devices = @()
+    if ($devRaw) {
+        foreach ($d in $devRaw) {
+            $ipList = @()
+            if ($d.'ipv4-address') { $ipList += $d.'ipv4-address' }
+            if ($d.'ipv6-address') { $ipList += $d.'ipv6-address' }
+
+            $devices += [PSCustomObject]@{
+                MacAddress    = $d.mac
+                Hostname      = $d.hostname
+                IpAddresses   = $ipList -join '; '
+                Interface     = $d.interface
+                VlanId        = $d.vlan
+                OsName        = $d.'os-name'
+                OsVersion     = $d.'os-version'
+                DeviceType    = $d.'device-type'
+                Vendor        = $d.vendor
+                Category      = $d.category
+                FirstSeen     = $d.'first-seen'
+                LastSeen      = $d.'last-seen'
+                MasterDevice  = $d.'master-mac'
+                IsOnline      = $d.'is-online'
+            }
+        }
+        Write-Host ('  Found ' + $devices.Count + ' detected device(s).') -ForegroundColor Green
+    } else {
+        Write-Warning '  No device inventory data returned.'
+    }
+
+    # Firewall sessions summary per source IP (connected/active traffic)
+    $sessRaw = Invoke-FgApi -Path '/monitor/firewall/session'
+    $sessions = @()
+    if ($sessRaw) {
+        # Aggregate by source IP to avoid thousands of individual session rows
+        $grouped = @{}
+        foreach ($s in $sessRaw) {
+            $srcIp = $s.'srcip'
+            if ([string]::IsNullOrEmpty($srcIp)) { continue }
+            if (-not $grouped.ContainsKey($srcIp)) {
+                $grouped[$srcIp] = [PSCustomObject]@{
+                    SourceIp      = $srcIp
+                    SrcInterface  = $s.'src_intf'
+                    DstInterface  = $s.'dst_intf'
+                    SessionCount  = 0
+                    Protocols     = @{}
+                }
+            }
+            $grouped[$srcIp].SessionCount++
+            $proto = $s.'proto_name'
+            if ($proto -and -not $grouped[$srcIp].Protocols.ContainsKey($proto)) {
+                $grouped[$srcIp].Protocols[$proto] = 0
+            }
+            if ($proto) { $grouped[$srcIp].Protocols[$proto]++ }
+        }
+        foreach ($key in $grouped.Keys) {
+            $row = $grouped[$key]
+            $protoStr = @()
+            foreach ($p in $row.Protocols.Keys) {
+                $protoStr += ($p + '(' + $row.Protocols[$p] + ')')
+            }
+            $sessions += [PSCustomObject]@{
+                SourceIp     = $row.SourceIp
+                SrcInterface = $row.SrcInterface
+                DstInterface = $row.DstInterface
+                SessionCount = $row.SessionCount
+                Protocols    = $protoStr -join '; '
+            }
+        }
+        $sessions = $sessions | Sort-Object -Property SessionCount -Descending
+        Write-Host ('  Found active sessions from ' + $sessions.Count + ' unique source IP(s).') -ForegroundColor Green
+    } else {
+        Write-Warning '  No session data returned (may require admin privileges).'
+    }
+
+    return [PSCustomObject]@{
+        ArpTable   = $arp
+        DhcpLeases = $leases
+        Devices    = $devices
+        Sessions   = $sessions
+    }
+}
+
+# ---------------------------------------------------------------------------
 # Display helpers
 # ---------------------------------------------------------------------------
 function Show-Section {
@@ -1166,19 +1371,24 @@ if (-not $connected) {
 }
 
 # Collect
+$sysInfo      = Get-SystemInfo
 $ifaceResult  = Get-Interfaces
 $ipsec        = Get-IpsecVpn
 $sslvpn       = Get-SslVpn
-$wireguard    = Get-WireGuard
 $fwPolicy     = Get-FirewallPolicy
 $vipResult    = Get-VirtualIPs
 $dnsResult    = Get-DnsConfig
 $dhcpResult   = Get-DhcpConfig
 $userResult   = Get-UserDefinitions
 $userGroups   = Get-UserGroups
-$radiusResult = Get-RadiusServers
+$radiusResult    = Get-RadiusServers
+$connectedResult = Get-ConnectedDevices
 
 # Display
+Show-Section -Title 'System Information'
+if ($null -eq $sysInfo) { Write-Host "  (none)" }
+else { $sysInfo | Format-List }
+
 Show-InterfacesTable -Interfaces $ifaceResult.Standard -Title 'Standard Network Interfaces'
 Show-InterfacesTable -Interfaces $ifaceResult.Vlans    -Title 'VLAN Interfaces'
 
@@ -1200,18 +1410,6 @@ Show-Section -Title 'SSL/OpenVPN - Portals'
 $portalCount = Get-SafeCount -Collection $sslvpn.Portals
 if ($portalCount -eq 0) { Write-Host "  (none)" }
 else { $sslvpn.Portals | Format-Table -AutoSize Name, TunnelMode, WebMode, IpMode, DnsServer1, SplitTunneling }
-
-Show-Section -Title 'WireGuard Profiles and Peers'
-$wgCount = Get-SafeCount -Collection $wireguard
-if ($wgCount -eq 0) { Write-Host "  (none / not configured)" }
-else {
-    foreach ($profile in $wireguard) {
-        Write-Host ("  Profile: " + $profile.Name + "  ListenPort: " + $profile.ListenPort + "  LocalIP: " + $profile.LocalIp) -ForegroundColor White
-        $peerCount = Get-SafeCount -Collection $profile.Peers
-        if ($peerCount -eq 0) { Write-Host "    (no peers)" }
-        else { $profile.Peers | Format-Table -AutoSize Name, PublicKey, AllowedIps, Endpoint, PersistentKeepalive, PresharedKey }
-    }
-}
 
 Show-Section -Title 'Firewall Policies'
 $fwCount = Get-SafeCount -Collection $fwPolicy
@@ -1292,14 +1490,34 @@ $radiusCount = Get-SafeCount -Collection $radiusResult
 if ($radiusCount -eq 0) { Write-Host "  (none)" }
 else { $radiusResult | Format-Table -AutoSize Name, Server, SecondaryServer, Port, AuthType, SecretSet, Timeout, NasIp, AccountingServers }
 
+Show-Section -Title 'Connected Devices - ARP Table'
+$arpCount = Get-SafeCount -Collection $connectedResult.ArpTable
+if ($arpCount -eq 0) { Write-Host "  (none)" }
+else { $connectedResult.ArpTable | Format-Table -AutoSize IpAddress, MacAddress, Interface, Type, Status }
+
+Show-Section -Title 'Connected Devices - DHCP Leases'
+$leaseCount = Get-SafeCount -Collection $connectedResult.DhcpLeases
+if ($leaseCount -eq 0) { Write-Host "  (none)" }
+else { $connectedResult.DhcpLeases | Format-Table -AutoSize IpAddress, MacAddress, Hostname, Interface, Status, ExpireTime }
+
+Show-Section -Title 'Connected Devices - Device Inventory'
+$devCount = Get-SafeCount -Collection $connectedResult.Devices
+if ($devCount -eq 0) { Write-Host "  (none)" }
+else { $connectedResult.Devices | Format-Table -AutoSize MacAddress, Hostname, IpAddresses, Interface, OsName, DeviceType, Vendor, IsOnline, LastSeen }
+
+Show-Section -Title 'Connected Devices - Active Sessions by Source IP'
+$sessCount = Get-SafeCount -Collection $connectedResult.Sessions
+if ($sessCount -eq 0) { Write-Host "  (none)" }
+else { $connectedResult.Sessions | Format-Table -AutoSize SourceIp, SrcInterface, DstInterface, SessionCount, Protocols }
+
 # ---------------------------------------------------------------------------
 # Excel Export - one workbook, one tab per section
 # ---------------------------------------------------------------------------
 $exportDir = 'C:\Temp'
-$timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+$datestamp = Get-Date -Format 'yyyyMMdd'
 $safeHost  = $FortiGateHost -replace '[^a-zA-Z0-9\-\.]', '_'
-$xlsxPath  = $exportDir + '\FG_' + $safeHost + '_' + $timestamp + '.xlsx'
-$tsvPath   = $exportDir + '\FG_' + $safeHost + '_' + $timestamp + '.tsv'
+$xlsxPath  = $exportDir + '\fortigate_config_FG_' + $safeHost + '_' + $datestamp + '.xlsx'
+$tsvPath   = $exportDir + '\fortigate_config_FG_' + $safeHost + '_' + $datestamp + '.tsv'
 
 if (-not (Test-Path -Path $exportDir)) {
     New-Item -ItemType Directory -Path $exportDir | Out-Null
@@ -1334,41 +1552,16 @@ function Flatten-Data {
 }
 
 # ---------------------------------------------------------------------------
-# Build WireGuard flat table (profiles x peers)
-# ---------------------------------------------------------------------------
-$wgFlat = @()
-foreach ($profile in $wireguard) {
-    $peerCount = Get-SafeCount -Collection $profile.Peers
-    if ($peerCount -eq 0) {
-        $wgFlat += [PSCustomObject]@{
-            ProfileName = $profile.Name; ListenPort = $profile.ListenPort
-            LocalIp = $profile.LocalIp; PeerName = ''; PublicKey = ''
-            PresharedKey = ''; AllowedIps = ''; Endpoint = ''; PersistentKeepalive = ''
-        }
-    } else {
-        foreach ($peer in $profile.Peers) {
-            $wgFlat += [PSCustomObject]@{
-                ProfileName = $profile.Name; ListenPort = $profile.ListenPort
-                LocalIp = $profile.LocalIp; PeerName = $peer.Name
-                PublicKey = $peer.PublicKey; PresharedKey = $peer.PresharedKey
-                AllowedIps = $peer.AllowedIps; Endpoint = $peer.Endpoint
-                PersistentKeepalive = $peer.PersistentKeepalive
-            }
-        }
-    }
-}
-
-# ---------------------------------------------------------------------------
 # Define all tabs in order: TabName -> Data
 # ---------------------------------------------------------------------------
 $tabs = [ordered]@{
+    'System_Info'       = Flatten-Data -Data @($sysInfo)
     'Interfaces'        = Flatten-Data -Data $ifaceResult.Standard
     'VLANs'             = Flatten-Data -Data $ifaceResult.Vlans
     'IPsec_Phase1'      = Flatten-Data -Data $ipsec.Phase1
     'IPsec_Phase2'      = Flatten-Data -Data $ipsec.Phase2
     'SSLVPN_Settings'   = if ($sslvpn.Settings) { Flatten-Data -Data @($sslvpn.Settings) } else { @() }
     'SSLVPN_Portals'    = Flatten-Data -Data $sslvpn.Portals
-    'WireGuard'         = Flatten-Data -Data $wgFlat
     'FW_Policies'       = Flatten-Data -Data $fwPolicy
     'Virtual_IPs'       = Flatten-Data -Data $vipResult.Vips
     'VIP_Groups'        = Flatten-Data -Data $vipResult.Groups
@@ -1385,6 +1578,10 @@ $tabs = [ordered]@{
     'Users_TACACS'      = Flatten-Data -Data $userResult.TacacsServers
     'User_Groups'       = Flatten-Data -Data $userGroups
     'RADIUS_Servers'    = Flatten-Data -Data $radiusResult
+    'ARP_Table'         = Flatten-Data -Data $connectedResult.ArpTable
+    'DHCP_Leases'       = Flatten-Data -Data $connectedResult.DhcpLeases
+    'Device_Inventory'  = Flatten-Data -Data $connectedResult.Devices
+    'Active_Sessions'   = Flatten-Data -Data $connectedResult.Sessions
 }
 
 # ---------------------------------------------------------------------------
