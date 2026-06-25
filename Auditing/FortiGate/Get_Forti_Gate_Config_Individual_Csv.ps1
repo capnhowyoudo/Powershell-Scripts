@@ -1,59 +1,20 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Collects full configuration and device data from a FortiGate firewall and exports to individual CSV files.
+    Retrieves network interfaces, VLANs, and VPN configurations from a FortiGate firewall.
 
 .DESCRIPTION
-    Connects to the FortiGate REST API and collects the following data,
-    exporting each section as a separate CSV file to C:\Temp:
-
-    SYSTEM
-      - System information (hostname, serial number, model, firmware,
-        build number, operation mode, system time, uptime, WAN IP)
-
-    NETWORK
-      - Standard network interfaces (IP address, subnet, MAC, speed,
-        MTU, zone, allowed access, secondary IPs)
-      - VLANs (VLAN ID, parent interface, IP/subnet, description, status)
-
-    VPN
-      - IPsec VPN Phase 1 (tunnel name, IKE version, interface, remote
-        gateway, proposal, DH group, auth method)
-      - IPsec VPN Phase 2 (selectors, src/dst subnets, proposal, DH group)
-      - SSL/OpenVPN global settings (listen port, interface, IP pools)
-      - SSL/OpenVPN portals (tunnel mode, web mode, split tunneling)
-
-    FIREWALL
-      - Firewall policies (policy ID, name, action, src/dst interfaces,
-        src/dst addresses, services, NAT, logging, security profiles)
-      - Virtual IPs - DNAT (external IP, mapped IP, port forwarding)
-      - VIP groups (members, interface)
-
-    DNS
-      - Global DNS settings (primary/secondary resolvers, cache, domain)
-      - DNS server interfaces (mode, filter profile)
-      - DNS zones (type, TTL, primary name server)
-      - DNS static entries (hostname-to-IP mappings)
-
-    DHCP
-      - DHCP servers (interface, gateway, netmask, lease time, DNS, NTP)
-      - DHCP IP ranges (start/end IP per server)
-      - DHCP reservations (MAC-to-IP static assignments)
-      - DHCP custom options (option code, type, value)
-
-    USERS AND AUTHENTICATION
-      - Local users (status, type, 2FA, linked RADIUS/LDAP server)
-      - LDAP server definitions (server, port, base DN, group matching)
-      - TACACS+ server definitions (server, port, auth/accounting settings)
-      - User groups (type, members, RADIUS/LDAP match rules)
-      - RADIUS servers (primary/secondary servers, auth type, NAS IP,
-        accounting servers, VSA attributes)
-
-    CONNECTED DEVICES
-      - ARP table (IP-to-MAC mappings, interface, entry type)
-      - Active DHCP leases (IP, MAC, hostname, expiry time)
-      - Device inventory (OS, device type, vendor, first/last seen)
-      - Active sessions aggregated by source IP (session count, protocols)
+    Connects to the FortiGate REST API and collects:
+      - Standard network interfaces (IP, subnet, parent interface)
+	  - license/status
+      - VLANs (tag, description, parent interface, IP/subnet)
+      - IPsec VPN Phase 1 and Phase 2 configurations
+      - SSL/OpenVPN server configurations
+      - Connected devices (ARP table, DHCP leases, active sessions)
+      - Firewall policies
+      - Virtual IPs (DNAT) and VIP groups
+      - DNS settings, zones, and static entries
+    Results are exported as CSV files to C:\Temp automatically.
 
 .PARAMETER FortiGateHost
     The IP address or hostname of the FortiGate firewall.
@@ -405,7 +366,7 @@ function Get-SafeCount {
 # Collect System Information
 # ---------------------------------------------------------------------------
 function Get-SystemInfo {
-    Write-Host "`n[1/12] Collecting system information..." -ForegroundColor Yellow
+    Write-Host "`n[1/13] Collecting system information..." -ForegroundColor Yellow
 
     # /monitor/system/status returns data as TOP-LEVEL properties on the response
     # object (not inside .results like CMDB endpoints do). We must call
@@ -568,7 +529,7 @@ function Get-SystemInfo {
 # Collect interfaces and VLANs
 # ---------------------------------------------------------------------------
 function Get-Interfaces {
-    Write-Host "`n[2/12] Collecting network interfaces..." -ForegroundColor Yellow
+    Write-Host "`n[2/13] Collecting network interfaces..." -ForegroundColor Yellow
     $raw = Invoke-FgApi -Path '/cmdb/system/interface'
 
     $standard = @()
@@ -625,7 +586,7 @@ function Get-Interfaces {
 # Collect IPsec VPN
 # ---------------------------------------------------------------------------
 function Get-IpsecVpn {
-    Write-Host "`n[3/12] Collecting IPsec VPN configurations..." -ForegroundColor Yellow
+    Write-Host "`n[3/13] Collecting IPsec VPN configurations..." -ForegroundColor Yellow
 
     $ph1Raw = Invoke-FgApi -Path '/cmdb/vpn.ipsec/phase1-interface'
     $phase1 = @()
@@ -681,7 +642,7 @@ function Get-IpsecVpn {
 # Collect SSL/OpenVPN
 # ---------------------------------------------------------------------------
 function Get-SslVpn {
-    Write-Host "`n[4/12] Collecting SSL/OpenVPN configurations..." -ForegroundColor Yellow
+    Write-Host "`n[4/13] Collecting SSL/OpenVPN configurations..." -ForegroundColor Yellow
 
     $settingsRaw = Invoke-FgApi -Path '/cmdb/vpn.ssl/settings'
     $settings    = $null
@@ -740,7 +701,7 @@ function Get-SslVpn {
 # Collect Firewall Policies
 # ---------------------------------------------------------------------------
 function Get-FirewallPolicy {
-    Write-Host "`n[5/12] Collecting firewall policies..." -ForegroundColor Yellow
+    Write-Host "`n[5/13] Collecting firewall policies..." -ForegroundColor Yellow
 
     $raw = Invoke-FgApi -Path '/cmdb/firewall/policy'
     $policies = @()
@@ -798,7 +759,7 @@ function Get-FirewallPolicy {
 # Collect Virtual IPs (VIPs / DNAT)
 # ---------------------------------------------------------------------------
 function Get-VirtualIPs {
-    Write-Host "`n[6/12] Collecting virtual IPs..." -ForegroundColor Yellow
+    Write-Host "`n[6/13] Collecting virtual IPs..." -ForegroundColor Yellow
 
     $raw  = Invoke-FgApi -Path '/cmdb/firewall/vip'
     $vips = @()
@@ -852,7 +813,7 @@ function Get-VirtualIPs {
 # Collect DNS configuration
 # ---------------------------------------------------------------------------
 function Get-DnsConfig {
-    Write-Host "`n[7/12] Collecting DNS configuration..." -ForegroundColor Yellow
+    Write-Host "`n[7/13] Collecting DNS configuration..." -ForegroundColor Yellow
 
     # Global DNS settings
     $settingsRaw = Invoke-FgApi -Path '/cmdb/system/dns'
@@ -948,7 +909,7 @@ function Get-DnsConfig {
 # Collect DHCP configuration
 # ---------------------------------------------------------------------------
 function Get-DhcpConfig {
-    Write-Host "`n[8/12] Collecting DHCP configuration..." -ForegroundColor Yellow
+    Write-Host "`n[8/13] Collecting DHCP configuration..." -ForegroundColor Yellow
 
     $raw     = Invoke-FgApi -Path '/cmdb/system.dhcp/server'
     $servers = @()
@@ -1057,7 +1018,7 @@ function Get-DhcpConfig {
 # Collect User Definitions
 # ---------------------------------------------------------------------------
 function Get-UserDefinitions {
-    Write-Host "`n[9/12] Collecting user definitions..." -ForegroundColor Yellow
+    Write-Host "`n[9/13] Collecting user definitions..." -ForegroundColor Yellow
 
     # Local users
     $localRaw = Invoke-FgApi -Path '/cmdb/user/local'
@@ -1143,7 +1104,7 @@ function Get-UserDefinitions {
 # Collect User Groups
 # ---------------------------------------------------------------------------
 function Get-UserGroups {
-    Write-Host "`n[10/12] Collecting user groups..." -ForegroundColor Yellow
+    Write-Host "`n[10/13] Collecting user groups..." -ForegroundColor Yellow
 
     $raw    = Invoke-FgApi -Path '/cmdb/user/group'
     $groups = @()
@@ -1185,7 +1146,7 @@ function Get-UserGroups {
 # Collect RADIUS Servers
 # ---------------------------------------------------------------------------
 function Get-RadiusServers {
-    Write-Host "`n[11/12] Collecting RADIUS servers..." -ForegroundColor Yellow
+    Write-Host "`n[11/13] Collecting RADIUS servers..." -ForegroundColor Yellow
 
     $raw     = Invoke-FgApi -Path '/cmdb/user/radius'
     $servers = @()
@@ -1247,7 +1208,7 @@ function Get-RadiusServers {
 # Collect Connected Devices (ARP, DHCP leases, active clients)
 # ---------------------------------------------------------------------------
 function Get-ConnectedDevices {
-    Write-Host "`n[12/12] Collecting connected devices..." -ForegroundColor Yellow
+    Write-Host "`n[13/13] Collecting connected devices..." -ForegroundColor Yellow
 
     # ARP table - layer 2 to layer 3 mappings seen by the firewall
     $arpRaw = Invoke-FgApi -Path '/monitor/network/arp'
@@ -1373,6 +1334,154 @@ function Get-ConnectedDevices {
 }
 
 # ---------------------------------------------------------------------------
+# Collect License Information
+# ---------------------------------------------------------------------------
+function Get-Licenses {
+    Write-Host "`n[12/13] Collecting license information..." -ForegroundColor Yellow
+
+    $licenses = @()
+
+    $licRaw = $null
+    try {
+        $uri     = 'https://' + $FortiGateHost + ':' + $Port + '/api/v2/monitor/license/status?vdom=' + $Vdom
+        $headers = @{}
+        if ($PSCmdlet.ParameterSetName -eq 'Token') { $headers['Authorization'] = 'Bearer ' + $ApiToken }
+        $splat = @{ Uri = $uri; Method = 'GET'; Headers = $headers }
+        if ($PSCmdlet.ParameterSetName -eq 'Credential') { $splat['WebSession'] = $script:FgSession }
+        if ($SkipCertificateCheck -and $PSVersionTable.PSVersion.Major -ge 7) { $splat['SkipCertificateCheck'] = $true }
+        $licRaw = Invoke-RestMethod @splat
+    } catch {
+        Write-Warning ('  /monitor/license/status failed: ' + $_.Exception.Message)
+    }
+
+    if ($licRaw) {
+        $src = $licRaw
+        if ($licRaw.PSObject.Properties.Name -contains 'results') { $src = $licRaw.results }
+
+        $licenseKeys = @(
+            'forticare', 'av', 'ips', 'appctrl', 'web_filtering', 'antispam',
+            'voip', 'mobile_malware', 'forticloud', 'fortianalyzer_cloud',
+            'fortimanager_cloud', 'fortisandbox_cloud', 'sdn_connector',
+            'ot_security', 'fortitoken_cloud', 'industrial_security',
+            'security_rating', 'sdwan_manager', 'fortiems_cloud',
+            'endpoint_control', 'dlp', 'nac', 'fortiguard', 'support'
+        )
+
+        foreach ($key in $licenseKeys) {
+            if ($src.PSObject.Properties.Name -contains $key) {
+                $lic = $src.$key
+                if ($null -eq $lic) { continue }
+
+                $expiryRaw  = ''
+                $expiryDate = ''
+                $daysLeft   = ''
+                $status     = ''
+
+                if ($lic.PSObject.Properties.Name -contains 'expires')     { $expiryRaw = [string]$lic.expires }
+                if ($lic.PSObject.Properties.Name -contains 'expiry_date') { $expiryRaw = [string]$lic.expiry_date }
+                if ($lic.PSObject.Properties.Name -contains 'status')      { $status    = [string]$lic.status }
+                if ($status -eq '' -and $lic.PSObject.Properties.Name -contains 'type') { $status = [string]$lic.type }
+
+                if ($expiryRaw -ne '' -and $expiryRaw -ne '0') {
+                    try {
+                        $epoch = [int64]$expiryRaw
+                        if ($epoch -gt 1000000) {
+                            $expiryDate = ([System.DateTimeOffset]::FromUnixTimeSeconds($epoch)).LocalDateTime.ToString('yyyy-MM-dd')
+                            $days = ([System.DateTimeOffset]::FromUnixTimeSeconds($epoch).LocalDateTime - (Get-Date)).Days
+                            $daysLeft = $days.ToString()
+                        }
+                    } catch {
+                        $expiryDate = $expiryRaw
+                        try {
+                            $days = ([datetime]::Parse($expiryRaw) - (Get-Date)).Days
+                            $daysLeft = $days.ToString()
+                        } catch {}
+                    }
+                }
+
+                $version = ''
+                $serial  = ''
+                $account = ''
+                if ($lic.PSObject.Properties.Name -contains 'version') { $version = [string]$lic.version }
+                if ($lic.PSObject.Properties.Name -contains 'serial')  { $serial  = [string]$lic.serial }
+                if ($lic.PSObject.Properties.Name -contains 'account') { $account = [string]$lic.account }
+
+                $licenses += [PSCustomObject]@{
+                    LicenseType   = $key.Replace('_',' ').ToUpper()
+                    Status        = $status
+                    ExpiryDate    = $expiryDate
+                    DaysRemaining = $daysLeft
+                    Version       = $version
+                    Serial        = $serial
+                    Account       = $account
+                }
+            }
+        }
+
+        # Capture any additional unlisted license keys dynamically
+        foreach ($prop in $src.PSObject.Properties) {
+            $key = $prop.Name
+            if ($licenseKeys -contains $key) { continue }
+            if ($key -in @('status','http_method','revision','vdom','path','name','action','serial','build','version')) { continue }
+            $lic = $prop.Value
+            if ($null -eq $lic -or $lic -isnot [System.Management.Automation.PSCustomObject]) { continue }
+
+            $expiryRaw  = ''
+            $expiryDate = ''
+            $daysLeft   = ''
+            $licStatus  = ''
+
+            if ($lic.PSObject.Properties.Name -contains 'expires')     { $expiryRaw = [string]$lic.expires }
+            if ($lic.PSObject.Properties.Name -contains 'expiry_date') { $expiryRaw = [string]$lic.expiry_date }
+            if ($lic.PSObject.Properties.Name -contains 'status')      { $licStatus = [string]$lic.status }
+
+            if ($expiryRaw -ne '' -and $expiryRaw -ne '0') {
+                try {
+                    $epoch = [int64]$expiryRaw
+                    if ($epoch -gt 1000000) {
+                        $expiryDate = ([System.DateTimeOffset]::FromUnixTimeSeconds($epoch)).LocalDateTime.ToString('yyyy-MM-dd')
+                        $days = ([System.DateTimeOffset]::FromUnixTimeSeconds($epoch).LocalDateTime - (Get-Date)).Days
+                        $daysLeft = $days.ToString()
+                    }
+                } catch {
+                    $expiryDate = $expiryRaw
+                    try {
+                        $days = ([datetime]::Parse($expiryRaw) - (Get-Date)).Days
+                        $daysLeft = $days.ToString()
+                    } catch {}
+                }
+            }
+
+            $licenses += [PSCustomObject]@{
+                LicenseType   = $key.Replace('_',' ').ToUpper()
+                Status        = $licStatus
+                ExpiryDate    = $expiryDate
+                DaysRemaining = $daysLeft
+                Version       = ''
+                Serial        = ''
+                Account       = ''
+            }
+        }
+    } else {
+        Write-Warning '  No license data returned.'
+    }
+
+    if ($licenses.Count -gt 0) {
+        Write-Host ('  Found ' + $licenses.Count + ' license(s).') -ForegroundColor Green
+        foreach ($lic in $licenses) {
+            if ($lic.DaysRemaining -ne '' -and [int]$lic.DaysRemaining -lt 30 -and [int]$lic.DaysRemaining -ge 0) {
+                Write-Warning ('  WARNING: ' + $lic.LicenseType + ' expires in ' + $lic.DaysRemaining + ' day(s) on ' + $lic.ExpiryDate)
+            }
+            if ($lic.DaysRemaining -ne '' -and [int]$lic.DaysRemaining -lt 0) {
+                Write-Warning ('  EXPIRED:  ' + $lic.LicenseType + ' expired on ' + $lic.ExpiryDate)
+            }
+        }
+    }
+
+    return $licenses
+}
+
+# ---------------------------------------------------------------------------
 # Display helpers
 # ---------------------------------------------------------------------------
 function Show-Section {
@@ -1422,12 +1531,18 @@ $dhcpResult   = Get-DhcpConfig
 $userResult   = Get-UserDefinitions
 $userGroups   = Get-UserGroups
 $radiusResult    = Get-RadiusServers
+$licenseResult   = Get-Licenses
 $connectedResult = Get-ConnectedDevices
 
 # Display
 Show-Section -Title 'System Information'
 if ($null -eq $sysInfo) { Write-Host "  (none)" }
 else { $sysInfo | Format-List }
+
+Show-Section -Title 'Licenses'
+$licCount = Get-SafeCount -Collection $licenseResult
+if ($licCount -eq 0) { Write-Host "  (none)" }
+else { $licenseResult | Format-Table -AutoSize LicenseType, Status, ExpiryDate, DaysRemaining, Version, Account }
 
 Show-InterfacesTable -Interfaces $ifaceResult.Standard -Title 'Standard Network Interfaces'
 Show-InterfacesTable -Interfaces $ifaceResult.Vlans    -Title 'VLAN Interfaces'
@@ -1599,33 +1714,38 @@ function Export-ToCsv {
 # System Info
 Export-ToCsv -Data @($sysInfo) `
              -Label 'System Info' `
-             -FilePath ($exportDir + '\\' + 'system_info' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'system_info' + $fileSuffix + '.csv')
+
+# Licenses
+Export-ToCsv -Data $licenseResult `
+             -Label 'Licenses' `
+             -FilePath ($exportDir + '\' + 'licenses' + $fileSuffix + '.csv')
 
 # Standard Interfaces
 Export-ToCsv -Data $ifaceResult.Standard `
              -Label 'Standard Interfaces' `
-             -FilePath ($exportDir + '\\' + 'interfaces' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'interfaces' + $fileSuffix + '.csv')
 
 # VLANs
 Export-ToCsv -Data $ifaceResult.Vlans `
              -Label 'VLANs' `
-             -FilePath ($exportDir + '\\' + 'vlans' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'vlans' + $fileSuffix + '.csv')
 
 # IPsec Phase 1
 Export-ToCsv -Data $ipsec.Phase1 `
              -Label 'IPsec Phase 1' `
-             -FilePath ($exportDir + '\\' + 'ipsec_phase1' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'ipsec_phase1' + $fileSuffix + '.csv')
 
 # IPsec Phase 2
 Export-ToCsv -Data $ipsec.Phase2 `
              -Label 'IPsec Phase 2' `
-             -FilePath ($exportDir + '\\' + 'ipsec_phase2' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'ipsec_phase2' + $fileSuffix + '.csv')
 
 # SSL-VPN Settings
 if ($null -ne $sslvpn.Settings) {
     Export-ToCsv -Data @($sslvpn.Settings) `
                  -Label 'SSL-VPN Settings' `
-                 -FilePath ($exportDir + '\\' + 'sslvpn_settings' + $fileSuffix + '.csv')
+                 -FilePath ($exportDir + '\' + 'sslvpn_settings' + $fileSuffix + '.csv')
 } else {
     Write-Host '  [SKIP] SSL-VPN Settings - not configured' -ForegroundColor DarkGray
 }
@@ -1633,28 +1753,28 @@ if ($null -ne $sslvpn.Settings) {
 # SSL-VPN Portals
 Export-ToCsv -Data $sslvpn.Portals `
              -Label 'SSL-VPN Portals' `
-             -FilePath ($exportDir + '\\' + 'sslvpn_portals' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'sslvpn_portals' + $fileSuffix + '.csv')
 
 # Firewall Policies
 Export-ToCsv -Data $fwPolicy `
              -Label 'Firewall Policies' `
-             -FilePath ($exportDir + '\\' + 'fw_policies' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'fw_policies' + $fileSuffix + '.csv')
 
 # Virtual IPs
 Export-ToCsv -Data $vipResult.Vips `
              -Label 'Virtual IPs' `
-             -FilePath ($exportDir + '\\' + 'vips' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'vips' + $fileSuffix + '.csv')
 
 # VIP Groups
 Export-ToCsv -Data $vipResult.Groups `
              -Label 'VIP Groups' `
-             -FilePath ($exportDir + '\\' + 'vip_groups' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'vip_groups' + $fileSuffix + '.csv')
 
 # DNS Global Settings
 if ($null -ne $dnsResult.Settings) {
     Export-ToCsv -Data @($dnsResult.Settings) `
                  -Label 'DNS Global Settings' `
-                 -FilePath ($exportDir + '\\' + 'dns_settings' + $fileSuffix + '.csv')
+                 -FilePath ($exportDir + '\' + 'dns_settings' + $fileSuffix + '.csv')
 } else {
     Write-Host '  [SKIP] DNS Global Settings - not configured' -ForegroundColor DarkGray
 }
@@ -1662,82 +1782,82 @@ if ($null -ne $dnsResult.Settings) {
 # DNS Server Interfaces
 Export-ToCsv -Data $dnsResult.DnsServers `
              -Label 'DNS Server Interfaces' `
-             -FilePath ($exportDir + '\\' + 'dns_servers' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'dns_servers' + $fileSuffix + '.csv')
 
 # DNS Zones
 Export-ToCsv -Data $dnsResult.Zones `
              -Label 'DNS Zones' `
-             -FilePath ($exportDir + '\\' + 'dns_zones' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'dns_zones' + $fileSuffix + '.csv')
 
 # DNS Static Entries
 Export-ToCsv -Data $dnsResult.StaticEntries `
              -Label 'DNS Static Entries' `
-             -FilePath ($exportDir + '\\' + 'dns_static' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'dns_static' + $fileSuffix + '.csv')
 
 # DHCP Servers
 Export-ToCsv -Data $dhcpResult.Servers `
              -Label 'DHCP Servers' `
-             -FilePath ($exportDir + '\\' + 'dhcp_servers' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'dhcp_servers' + $fileSuffix + '.csv')
 
 # DHCP IP Ranges
 Export-ToCsv -Data $dhcpResult.Ranges `
              -Label 'DHCP IP Ranges' `
-             -FilePath ($exportDir + '\\' + 'dhcp_ranges' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'dhcp_ranges' + $fileSuffix + '.csv')
 
 # DHCP Reservations
 Export-ToCsv -Data $dhcpResult.Reservations `
              -Label 'DHCP Reservations' `
-             -FilePath ($exportDir + '\\' + 'dhcp_reservations' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'dhcp_reservations' + $fileSuffix + '.csv')
 
 # DHCP Custom Options
 Export-ToCsv -Data $dhcpResult.Options `
              -Label 'DHCP Custom Options' `
-             -FilePath ($exportDir + '\\' + 'dhcp_options' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'dhcp_options' + $fileSuffix + '.csv')
 
 # Local Users
 Export-ToCsv -Data $userResult.LocalUsers `
              -Label 'Local Users' `
-             -FilePath ($exportDir + '\\' + 'users_local' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'users_local' + $fileSuffix + '.csv')
 
 # LDAP Servers
 Export-ToCsv -Data $userResult.LdapServers `
              -Label 'LDAP Servers' `
-             -FilePath ($exportDir + '\\' + 'users_ldap' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'users_ldap' + $fileSuffix + '.csv')
 
 # TACACS+ Servers
 Export-ToCsv -Data $userResult.TacacsServers `
              -Label 'TACACS+ Servers' `
-             -FilePath ($exportDir + '\\' + 'users_tacacs' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'users_tacacs' + $fileSuffix + '.csv')
 
 # User Groups
 Export-ToCsv -Data $userGroups `
              -Label 'User Groups' `
-             -FilePath ($exportDir + '\\' + 'user_groups' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'user_groups' + $fileSuffix + '.csv')
 
 # RADIUS Servers
 Export-ToCsv -Data $radiusResult `
              -Label 'RADIUS Servers' `
-             -FilePath ($exportDir + '\\' + 'radius_servers' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'radius_servers' + $fileSuffix + '.csv')
 
 # ARP Table
 Export-ToCsv -Data $connectedResult.ArpTable `
              -Label 'ARP Table' `
-             -FilePath ($exportDir + '\\' + 'arp_table' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'arp_table' + $fileSuffix + '.csv')
 
 # DHCP Leases
 Export-ToCsv -Data $connectedResult.DhcpLeases `
              -Label 'DHCP Leases' `
-             -FilePath ($exportDir + '\\' + 'dhcp_leases' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'dhcp_leases' + $fileSuffix + '.csv')
 
 # Device Inventory
 Export-ToCsv -Data $connectedResult.Devices `
              -Label 'Device Inventory' `
-             -FilePath ($exportDir + '\\' + 'device_inventory' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'device_inventory' + $fileSuffix + '.csv')
 
 # Active Sessions
 Export-ToCsv -Data $connectedResult.Sessions `
              -Label 'Active Sessions' `
-             -FilePath ($exportDir + '\\' + 'active_sessions' + $fileSuffix + '.csv')
+             -FilePath ($exportDir + '\' + 'active_sessions' + $fileSuffix + '.csv')
 
 Write-Host "`n============================================================" -ForegroundColor Magenta
 Write-Host "  Collection complete. Files saved to: $exportDir" -ForegroundColor Magenta
