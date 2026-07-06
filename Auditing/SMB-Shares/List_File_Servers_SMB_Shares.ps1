@@ -3,8 +3,8 @@
     Gathers an inventory of all file servers and their configured SMB shares in the domain.
 .DESCRIPTION
     This script searches Active Directory for server operating systems, then connects
-    to each one (plus the local machine) to list all SMB shares, excluding default
-    administrative shares.
+    to each one (plus the local machine) to list all SMB file shares — excluding
+    printers, devices, IPC, and default administrative shares.
 .NOTES
     - Requires the ActiveDirectory PowerShell module (RSAT).
     - Must be run with a domain account that has read access to AD and local administrator
@@ -44,21 +44,22 @@ foreach ($Server in $Servers) {
     Write-Host "Processing server: $($Server)" -ForegroundColor Cyan
     
     try {
-        # Determine if this is the local machine to use "localhost" style handling
+        # Determine if this is the local machine
         $IsLocal = ($Server -eq $env:COMPUTERNAME)
 
         # Use Get-CimInstance to query the Win32_Share class (local or remote)
+        # Type -eq 0 filters to Disk Drive shares only (excludes printers, devices, IPC)
         if ($IsLocal) {
             $Shares = Get-CimInstance -ClassName Win32_Share -ErrorAction Stop |
-                      Where-Object { $_.Name -notlike "*$" }
+                      Where-Object { $_.Type -eq 0 -and $_.Name -notlike "*$" }
         } else {
             $Shares = Get-CimInstance -ClassName Win32_Share -ComputerName $Server -ErrorAction Stop |
-                      Where-Object { $_.Name -notlike "*$" }
+                      Where-Object { $_.Type -eq 0 -and $_.Name -notlike "*$" }
         }
         
         # If shares are found, process the details
         if ($Shares) {
-            Write-Host "    ✅ Found $($Shares.Count) user-defined shares." -ForegroundColor DarkGreen
+            Write-Host "    ✅ Found $($Shares.Count) SMB file shares." -ForegroundColor DarkGreen
             
             # Get the IP address of the file server (for reference)
             if ($IsLocal) {
@@ -84,7 +85,7 @@ foreach ($Server in $Servers) {
             }
         }
         else {
-            Write-Host "    - No user-defined shares found. Skipping." -ForegroundColor DarkGray
+            Write-Host "    - No SMB file shares found. Skipping." -ForegroundColor DarkGray
         }
     }
     catch {
@@ -99,5 +100,5 @@ if ($ReportData.Count -gt 0) {
     Write-Host "✅ Export Complete! Total shares listed: $($ReportData.Count)" -ForegroundColor Green
     Write-Host "File saved at: $ExportPath" -ForegroundColor Cyan
 } else {
-    Write-Host "❌ No user-defined SMB shares were found on the identified servers." -ForegroundColor Red
+    Write-Host "❌ No SMB file shares were found on the identified servers." -ForegroundColor Red
 }
