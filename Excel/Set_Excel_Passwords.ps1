@@ -28,10 +28,10 @@
     .\Set_Excel_Passwords.ps1 -FolderPath "C:\Reports" -Password "Sup3rSecret!" -OutputFolder "C:\Reports\Protected"
 	
 .EXAMPLE
-    powershell.exe -ExecutionPolicy Bypass -File ".\Set_Excel_Passwords.ps1" -FolderPath "C:\Reports" -Password "Sup3rSecret!" -OutputFolder "C:\Reports\Protected"+
+ 	Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force; .\Set_Excel_Passwords.ps1 -FolderPath "C:\Reports" -Password "Sup3rSecret!" -OutputFolder "C:\Reports\Protected"
 	
 .EXAMPLE
-    powershell.exe -ExecutionPolicy Bypass -File ".\Set_Excel_Passwords.ps1" -FolderPath "C:\Reports" -Password "Sup3rSecret!"
+	Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force; .\Set_Excel_Passwords.ps1 -FolderPath "C:\Reports" -Password "Sup3rSecret!"
 #>
 
 param(
