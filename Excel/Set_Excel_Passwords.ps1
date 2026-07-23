@@ -5,7 +5,10 @@
 .DESCRIPTION
     Uses Excel's COM automation, so Microsoft Excel must be installed on this machine.
     Each file is opened, a password is set via Workbook.Password, and the file is
-    re-saved in place (or to an output folder if -OutputFolder is specified).
+    re-saved in place (or to an output folder if -OutputFolder is specified). 
+	Set Execution Policy may need to be ran if runnins scripts is disabled. 
+	
+	Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 .PARAMETER FolderPath
     Folder containing the .xlsx/.xlsm files to protect.
