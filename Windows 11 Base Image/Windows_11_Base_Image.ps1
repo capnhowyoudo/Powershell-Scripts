@@ -1694,12 +1694,21 @@ else {
 # Check Chocolatey Install & Install #
 ######################################
 
-# Check if Chocolatey is installed
+$chocoBin = "$env:ProgramData\chocolatey\bin"
+
 if (Get-Command choco -ErrorAction SilentlyContinue) {
     Write-Host "Chocolatey is already installed. Continuing..."
 }
+elseif (Test-Path "$chocoBin\choco.exe") {
+    Write-Host "Chocolatey installed but not on PATH. Adding to session..."
+    $env:Path += ";$chocoBin"
+}
 else {
     Write-Host "Chocolatey not found. Installing..."
+    # Remove a leftover/broken folder so the installer doesn't abort
+    if (Test-Path "$env:ProgramData\chocolatey") {
+        Remove-Item "$env:ProgramData\chocolatey" -Recurse -Force
+    }
 
     Set-ExecutionPolicy Bypass -Scope Process -Force
     [System.Net.ServicePointManager]::SecurityProtocol = `
@@ -1708,8 +1717,9 @@ else {
     iex ((New-Object System.Net.WebClient).DownloadString(
         'https://community.chocolatey.org/install.ps1'
     ))
-}
 
+    $env:Path += ";$chocoBin"
+}
 
 ########################
 # Install Applications #
